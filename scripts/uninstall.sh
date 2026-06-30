@@ -5,7 +5,7 @@ CONF="${ROUTER_CONF:-/etc/home-router-singbox/router.conf}"
 BACKUP_ROOT="${BACKUP_ROOT:-/root}"
 
 if [ "$(id -u)" != "0" ]; then
-  echo "Run as root: sudo home-router-uninstall.sh" >&2
+  echo "请用 root 运行：sudo home-router-uninstall.sh" >&2
   exit 1
 fi
 
@@ -23,25 +23,25 @@ confirm_uninstall() {
   fi
 
   cat <<EOF
-This will uninstall Home Router sing-box and remove:
-  - sb/sc menu commands
-  - home-router systemd forwarding service/timer
+即将卸载 Home sing-box 旁路由，并清理：
+  - sb/sc 菜单命令
+  - home-router systemd 转发服务/timer
   - /etc/home-router-singbox
   - /etc/sing-box
   - /opt/home-router-singbox
   - /usr/local/share/metacubexd
-  - forwarding/NAT rules created for ${LAN_IF} ${LAN_NET}
+  - 为 ${LAN_IF} ${LAN_NET} 创建的转发/NAT 规则
 
-A backup will be created first under ${BACKUP_ROOT}.
-Type UNINSTALL to continue:
+卸载前会先备份到 ${BACKUP_ROOT}。
+请输入 UNINSTALL 继续：
 EOF
   read answer || answer=""
   if [ "$answer" != "UNINSTALL" ]; then
-    echo "Cancelled."
+    echo "已取消。"
     exit 0
   fi
 
-  printf "Also purge the sing-box package? [y/N]: "
+  printf "是否同时卸载 sing-box 软件包？[y/N]: "
   read purge_answer || purge_answer=""
   case "$purge_answer" in
     y|Y|yes|YES) PURGE_SINGBOX=1 ;;
@@ -79,9 +79,9 @@ backup_existing_files() {
   if [ -s "$list" ]; then
     mkdir -p "$BACKUP_ROOT"
     tar -C / -czf "$backup" -T "$list"
-    echo "Backup: $backup"
+    echo "备份文件：$backup"
   else
-    echo "Nothing to back up."
+    echo "没有需要备份的文件。"
   fi
 
   rm -f "$list"
@@ -112,7 +112,7 @@ remove_firewall_rules() {
   remove_filter_rule FORWARD -i "$LAN_IF" -o "$LAN_IF" -s "$LAN_NET" -j ACCEPT
   remove_table_rule nat POSTROUTING -s "$LAN_NET" -o "$LAN_IF" -j MASQUERADE
 
-  # Removed for compatibility with older versions of this kit.
+  # 兼容清理旧版本可能创建的规则。
   remove_table_rule mangle PREROUTING -i "$LAN_IF" -s "$LAN_NET" -p udp --dport 443 -j RETURN
 }
 
@@ -166,5 +166,5 @@ restore_resolv_conf
 purge_singbox_package
 rm -f /usr/local/sbin/home-router-uninstall.sh
 
-echo "Uninstalled Home Router sing-box."
-echo "If you used it as a phone gateway, change the phone gateway/DNS back to your main router."
+echo "Home sing-box 旁路由已卸载。"
+echo "如果手机曾经把它设为网关，请把手机网关/DNS 改回主路由。"

@@ -65,7 +65,7 @@ def convert(proxy):
 
 def main() -> None:
     if len(sys.argv) != 3:
-        raise SystemExit("usage: extract-outbounds.py clash-config.yaml outbounds.json")
+        raise SystemExit("用法：extract-outbounds.py clash配置.yaml outbounds.json")
     source = Path(sys.argv[1])
     target = Path(sys.argv[2])
     config = yaml.safe_load(source.read_text(encoding="utf-8"))
@@ -75,10 +75,10 @@ def main() -> None:
         if item:
             outbounds.append(item)
     if not outbounds:
-        raise SystemExit("no supported hysteria2/vless proxies found")
+        raise SystemExit("没有找到支持的 hysteria2/vless 节点")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(outbounds, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"wrote {len(outbounds)} outbounds to {target}")
+    print(f"已写入 {len(outbounds)} 个节点到 {target}")
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ OUTBOUNDS_JSON="${OUTBOUNDS_JSON:-/etc/home-router-singbox/outbounds.json}"
 SUBSCRIPTION_CACHE="${SUBSCRIPTION_CACHE:-/etc/home-router-singbox/subscription.yaml}"
 
 if [ ! -f "$CONF" ]; then
-  echo "Missing config: $CONF" >&2
+  echo "缺少配置文件：$CONF" >&2
   exit 1
 fi
 
@@ -19,7 +19,7 @@ SUBSCRIBE_USER_AGENT="${SUBSCRIBE_USER_AGENT:-clash.meta}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
 
 if [ -z "$SUBSCRIBE_URL" ]; then
-  echo "SUBSCRIBE_URL is empty. Edit router.conf or run sudo sb." >&2
+  echo "订阅地址为空。请运行 sudo sb 修改配置，或编辑 router.conf。" >&2
   exit 1
 fi
 
@@ -41,4 +41,4 @@ download() {
 
 download "$SUBSCRIBE_URL" "$SUBSCRIPTION_CACHE"
 python3 "$APP_DIR/scripts/extract-outbounds.py" "$SUBSCRIPTION_CACHE" "$OUTBOUNDS_JSON"
-echo "Updated $OUTBOUNDS_JSON"
+echo "订阅已更新：$OUTBOUNDS_JSON"

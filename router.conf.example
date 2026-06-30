@@ -1,40 +1,38 @@
-# Copy to router.conf and edit before running ./install.sh.
+# 复制为 router.conf 后可手动修改；普通用户建议直接运行 ./install.sh 按提示生成。
 
-# LAN side.
+# LAN 侧设置。
 LAN_IF=enp3s0
 LAN_NET=192.168.3.0/24
 LAN_IP=192.168.3.88
 
-# sing-box listeners.
+# sing-box 监听端口。
 PROXY_PORT=7890
 PANEL_PORT=9091
 PANEL_SECRET=change-me
 
-# TUN settings.
+# TUN 设置。
 TUN_NAME=sbtun0
 TUN_ADDRESS=28.0.0.1/30
 
-# DNS used by the router host itself. Phone clients should normally use these
-# as DNS too, while gateway points to LAN_IP.
+# 路由机自身使用的 DNS。手机通常也用这两个 DNS，网关指向 LAN_IP。
 DNS1=223.5.5.5
 DNS2=119.29.29.29
 
-# Optional Clash/Mihomo subscription URL. If set, install.sh will download it
-# and generate sing-box outbounds automatically.
+# 可选：Clash/Mihomo 订阅地址。填写后安装时会自动下载订阅并生成 sing-box 节点。
 SUBSCRIBE_URL=''
 SUBSCRIBE_USER_AGENT=clash.meta
 
-# Download URL for Debian amd64. Override when you want a newer sing-box.
+# Debian amd64 的 sing-box 安装包地址。需要新版 sing-box 时可以改这里。
 SINGBOX_DEB_URL=https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb
 
-# Optional proxy used only when downloading dependencies during install.
-# Example: DOWNLOAD_PROXY=http://127.0.0.1:7890
+# 可选：安装/更新时下载文件使用的代理。
+# 示例：DOWNLOAD_PROXY=http://127.0.0.1:7890
 DOWNLOAD_PROXY=''
 
-# Optional GitHub download accelerator prefix.
-# Example: GITHUB_DOWNLOAD_PREFIX=https://your-accelerator.example/
+# 可选：GitHub 下载加速前缀。
+# 示例：GITHUB_DOWNLOAD_PREFIX=https://你的加速地址/
 GITHUB_DOWNLOAD_PREFIX=''
 
-# MetaCubeXD static WebUI update source.
+# MetaCubeXD 静态 Web 面板更新来源。
 WEBUI_RELEASE_API=https://api.github.com/repos/MetaCubeX/metacubexd/releases/latest
 WEBUI_DOWNLOAD_URL=https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz

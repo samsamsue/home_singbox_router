@@ -6,7 +6,7 @@ CONF="${ROUTER_CONF:-$ROOT/router.conf}"
 BUILD="$ROOT/build"
 
 if [ "$(id -u)" != "0" ]; then
-  echo "Run as root." >&2
+  echo "请用 root 运行。" >&2
   exit 1
 fi
 
@@ -131,13 +131,13 @@ EOF
 
 create_conf_interactively() {
   if [ ! -r /dev/tty ] && [ "${ASSUME_DEFAULTS:-0}" != "1" ]; then
-    echo "Missing router.conf and no interactive terminal is available." >&2
-    echo "Run this script directly, or create router.conf from router.conf.example first." >&2
+    echo "缺少 router.conf，且当前不是交互终端。" >&2
+    echo "请直接运行本脚本，或先从 router.conf.example 创建 router.conf。" >&2
     exit 1
   fi
 
-  echo "No router.conf found. Creating one now." >&2
-  echo "Press Enter to keep the value in brackets." >&2
+  echo "没有找到 router.conf，现在开始创建。" >&2
+  echo "直接回车表示保留方括号里的默认值。" >&2
   echo >&2
 
   detected_if="$(default_lan_if || true)"
@@ -153,15 +153,15 @@ create_conf_interactively() {
   LAN_IP="${detected_ip:-192.168.3.88}"
   LAN_NET="${detected_net:-192.168.3.0/24}"
 
-  echo "Detected network:" >&2
-  echo "  LAN interface: $LAN_IF" >&2
-  echo "  Router LAN IP: $LAN_IP" >&2
-  echo "  LAN subnet:    $LAN_NET" >&2
+  echo "已自动检测网络：" >&2
+  echo "  LAN 网卡：$LAN_IF" >&2
+  echo "  旁路由 LAN IP：$LAN_IP" >&2
+  echo "  LAN 网段：$LAN_NET" >&2
   echo >&2
-  if prompt_yes_no "Change these network settings?" "n"; then
-    LAN_IF="$(prompt_value "LAN interface" "$LAN_IF")"
-    LAN_IP="$(prompt_value "Router LAN IP" "$LAN_IP")"
-    LAN_NET="$(prompt_value "LAN subnet" "$LAN_NET")"
+  if prompt_yes_no "是否修改这些网络设置？" "n"; then
+    LAN_IF="$(prompt_value "LAN 网卡" "$LAN_IF")"
+    LAN_IP="$(prompt_value "旁路由 LAN IP" "$LAN_IP")"
+    LAN_NET="$(prompt_value "LAN 网段" "$LAN_NET")"
   fi
 
   DNS1="223.5.5.5"
@@ -169,15 +169,15 @@ create_conf_interactively() {
   echo "DNS: $DNS1, $DNS2" >&2
   echo >&2
 
-  PROXY_PORT="$(prompt_value "Proxy port" "7890")"
-  PANEL_PORT="$(prompt_value "Panel port" "9091")"
-  PANEL_SECRET="$(prompt_value "Panel secret" "$default_secret")"
+  PROXY_PORT="$(prompt_value "代理端口" "7890")"
+  PANEL_PORT="$(prompt_value "面板端口" "9091")"
+  PANEL_SECRET="$(prompt_value "面板密钥" "$default_secret")"
 
   SUBSCRIBE_URL=""
   while [ -z "$SUBSCRIBE_URL" ] && [ ! -f "$ROOT/secrets/outbounds.json" ]; do
-    SUBSCRIBE_URL="$(prompt_value "Clash subscription URL" "")"
+    SUBSCRIBE_URL="$(prompt_value "Clash 订阅地址" "")"
     if [ -z "$SUBSCRIBE_URL" ]; then
-      echo "Subscription URL is required unless secrets/outbounds.json exists." >&2
+      echo "需要填写订阅地址；除非已经存在 secrets/outbounds.json。" >&2
     fi
   done
 
@@ -193,7 +193,7 @@ create_conf_interactively() {
   write_conf
   chmod 0600 "$CONF" 2>/dev/null || true
   echo >&2
-  echo "Created: $CONF" >&2
+  echo "已创建配置：$CONF" >&2
 }
 
 if [ ! -f "$CONF" ]; then
@@ -232,7 +232,7 @@ download() {
   url="$1"
   out="$2"
   real_url="$(download_url "$url")"
-  echo "Downloading: $url" >&2
+  echo "正在下载：$url" >&2
   if command -v curl >/dev/null 2>&1; then
     if [ -n "$DOWNLOAD_PROXY" ]; then
       curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -x "$DOWNLOAD_PROXY" -o "$out" "$real_url"
@@ -276,7 +276,7 @@ if [ -n "$SUBSCRIBE_URL" ]; then
 elif [ -f "$ROOT/secrets/outbounds.json" ]; then
   cp "$ROOT/secrets/outbounds.json" /etc/home-router-singbox/outbounds.json
 else
-  echo "Missing proxy nodes. Set SUBSCRIBE_URL in router.conf or create secrets/outbounds.json." >&2
+  echo "缺少代理节点。请在 router.conf 设置 SUBSCRIBE_URL，或创建 secrets/outbounds.json。" >&2
   exit 1
 fi
 
@@ -314,7 +314,7 @@ SYSCTL
 
 cat > /etc/systemd/system/home-lan-bypass-forward.service <<SERVICE
 [Unit]
-Description=Allow same-interface LAN forwarding for home bypass router
+Description=Home sing-box 旁路由同网卡转发
 After=network-online.target sing-box.service
 Wants=network-online.target
 
@@ -329,7 +329,7 @@ SERVICE
 
 cat > /etc/systemd/system/home-lan-bypass-forward.timer <<TIMER
 [Unit]
-Description=Refresh home bypass router forwarding rules
+Description=刷新 Home sing-box 旁路由转发规则
 
 [Timer]
 OnBootSec=30s
@@ -356,7 +356,7 @@ systemctl enable --now sing-box
 systemctl enable --now home-lan-bypass-forward.timer
 /usr/local/sbin/home-lan-bypass-forward.sh
 
-echo "Installed."
-echo "Panel: http://${LAN_IP}:${PANEL_PORT}/ui/"
-echo "Proxy: http://${LAN_IP}:${PROXY_PORT}"
-echo "Menu: sudo sb"
+echo "安装完成。"
+echo "面板地址：http://${LAN_IP}:${PANEL_PORT}/ui/"
+echo "显式代理：http://${LAN_IP}:${PROXY_PORT}"
+echo "管理菜单：sudo sb"

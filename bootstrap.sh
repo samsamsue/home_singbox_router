@@ -9,7 +9,7 @@ DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
 GITHUB_DOWNLOAD_PREFIX="${GITHUB_DOWNLOAD_PREFIX:-}"
 
 if [ "$(id -u)" != "0" ]; then
-  echo "Run as root:" >&2
+  echo "请用 root 运行：" >&2
   echo "  curl -fsSL https://raw.githubusercontent.com/${REPO}/${BRANCH}/bootstrap.sh | sudo sh" >&2
   exit 1
 fi
@@ -22,7 +22,7 @@ ensure_downloader() {
     apt-get update
     apt-get install -y curl ca-certificates tar
   else
-    echo "Missing curl/wget and cannot install dependencies automatically." >&2
+    echo "缺少 curl/wget，且无法自动安装依赖。" >&2
     exit 1
   fi
 }
@@ -66,12 +66,12 @@ mkdir -p "$INSTALL_DIR"
 tar -xzf "$archive" -C "$tmp"
 src="$(find "$tmp" -mindepth 2 -maxdepth 2 -type f -name install.sh -exec dirname {} \; | head -n 1)"
 if [ -z "$src" ]; then
-  echo "Downloaded archive layout is unexpected." >&2
+  echo "下载的安装包结构不符合预期。" >&2
   exit 1
 fi
 cp -R "$src/." "$INSTALL_DIR/"
 chmod +x "$INSTALL_DIR/install.sh" "$INSTALL_DIR"/scripts/*.sh 2>/dev/null || true
 
-echo "Installer downloaded to $INSTALL_DIR"
+echo "安装器已下载到 $INSTALL_DIR"
 cd "$INSTALL_DIR"
 exec ./install.sh

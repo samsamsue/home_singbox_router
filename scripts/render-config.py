@@ -34,7 +34,7 @@ def load_outbounds(path: Path) -> str:
     if isinstance(data, dict):
         data = data.get("outbounds", [])
     if not isinstance(data, list):
-        raise SystemExit("outbounds.json must be a JSON list or object with outbounds")
+        raise SystemExit("outbounds.json 必须是 JSON 列表，或包含 outbounds 字段的对象")
     tags = [item["tag"] for item in data if item.get("type") not in {"direct", "block"}]
     if not tags:
         raise SystemExit("outbounds.json has no proxy outbounds")
@@ -60,9 +60,9 @@ def main() -> None:
     out_path = Path(os.environ.get("OUTPUT", ROOT / "build" / "config.json"))
 
     if not conf_path.exists():
-        raise SystemExit(f"missing {conf_path}; copy router.conf.example to router.conf")
+        raise SystemExit(f"缺少 {conf_path}；请先创建 router.conf")
     if not outbounds_path.exists():
-        raise SystemExit(f"missing {outbounds_path}; create it from your sing-box proxy outbounds")
+        raise SystemExit(f"缺少 {outbounds_path}；请先配置订阅或节点")
 
     values = {
         "LAN_IF": "enp3s0",
@@ -85,7 +85,7 @@ def main() -> None:
 
     unresolved = [part.split("}}", 1)[0] for part in template.split("{{")[1:]]
     if unresolved:
-        raise SystemExit(f"unresolved template values: {', '.join(sorted(set(unresolved)))}")
+        raise SystemExit(f"模板里还有未解析的配置项：{', '.join(sorted(set(unresolved)))}")
 
     json.loads(template)
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -49,7 +49,7 @@ download() {
       wget -q -O "$out" "$real_url"
     fi
   else
-    echo "Missing curl or wget." >&2
+    echo "缺少 curl 或 wget，无法下载。" >&2
     exit 1
   fi
 }
@@ -125,7 +125,7 @@ if [ -f "$WEBUI_DIR/.home-router-webui-version" ]; then
 fi
 
 if [ -n "$latest_tag" ] && [ "$latest_tag" = "$current_tag" ] && [ "${FORCE_WEBUI_UPDATE:-0}" != "1" ]; then
-  echo "MetaCubeXD WebUI is already latest: $latest_tag"
+  echo "MetaCubeXD Web 面板已是最新版本：$latest_tag"
   exit 0
 fi
 
@@ -134,7 +134,7 @@ extract_dir="$tmp/extract"
 install_dir="$tmp/install"
 mkdir -p "$extract_dir" "$install_dir"
 
-echo "Downloading MetaCubeXD WebUI..."
+echo "正在下载 MetaCubeXD Web 面板..."
 download "$WEBUI_DOWNLOAD_URL" "$archive"
 tar -xzf "$archive" -C "$extract_dir"
 
@@ -145,7 +145,7 @@ elif [ -f "$extract_dir/index.html" ]; then
 else
   src="$(find "$extract_dir" -mindepth 1 -maxdepth 2 -type f -name index.html -exec dirname {} \; | head -n 1)"
   if [ -z "$src" ]; then
-    echo "Downloaded WebUI package does not contain index.html." >&2
+    echo "下载的 Web 面板压缩包里没有 index.html。" >&2
     exit 1
   fi
 fi
@@ -173,7 +173,7 @@ if [ -n "$backup" ]; then
 fi
 
 if [ -n "$latest_tag" ]; then
-  echo "Updated MetaCubeXD WebUI to $latest_tag."
+  echo "MetaCubeXD Web 面板已更新到 $latest_tag。"
 else
-  echo "Updated MetaCubeXD WebUI."
+  echo "MetaCubeXD Web 面板已更新。"
 fi
