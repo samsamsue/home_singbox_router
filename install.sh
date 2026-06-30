@@ -10,9 +10,137 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+tty_read() {
+  if [ -r /dev/tty ]; then
+    IFS= read -r "$@" </dev/tty
+  else
+    IFS= read -r "$@"
+  fi
+}
+
+prompt_value() {
+  label="$1"
+  default="$2"
+  if [ -n "$default" ]; then
+    printf "%s [%s]: " "$label" "$default" >/dev/tty 2>/dev/null || printf "%s [%s]: " "$label" "$default" >&2
+  else
+    printf "%s: " "$label" >/dev/tty 2>/dev/null || printf "%s: " "$label" >&2
+  fi
+  tty_read value || value=""
+  if [ -n "$value" ]; then
+    printf "%s" "$value"
+  else
+    printf "%s" "$default"
+  fi
+}
+
+quote_value() {
+  printf "%s" "$1" | sed "s/'/'\\\\''/g"
+}
+
+default_lan_if() {
+  ip route show default 2>/dev/null | awk '{ print $5; exit }'
+}
+
+default_lan_ip() {
+  iface="$1"
+  if [ -n "$iface" ]; then
+    ip -4 -o addr show dev "$iface" 2>/dev/null | awk '{ sub(/\/.*/, "", $4); print $4; exit }'
+  fi
+}
+
+default_lan_net() {
+  ipaddr="$1"
+  case "$ipaddr" in
+    *.*.*.*)
+      printf "%s\n" "$ipaddr" | awk -F. '{ print $1 "." $2 "." $3 ".0/24" }'
+      ;;
+    *)
+      printf "192.168.3.0/24"
+      ;;
+  esac
+}
+
+random_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 8
+  else
+    date +%s | awk '{ print "sb" $1 }'
+  fi
+}
+
+write_conf() {
+  tmp="${CONF}.tmp"
+  mkdir -p "$(dirname "$CONF")"
+  cat > "$tmp" <<EOF
+LAN_IF='$(quote_value "$LAN_IF")'
+LAN_NET='$(quote_value "$LAN_NET")'
+LAN_IP='$(quote_value "$LAN_IP")'
+PROXY_PORT='$(quote_value "$PROXY_PORT")'
+PANEL_PORT='$(quote_value "$PANEL_PORT")'
+PANEL_SECRET='$(quote_value "$PANEL_SECRET")'
+TUN_NAME='$(quote_value "$TUN_NAME")'
+TUN_ADDRESS='$(quote_value "$TUN_ADDRESS")'
+DNS1='$(quote_value "$DNS1")'
+DNS2='$(quote_value "$DNS2")'
+SUBSCRIBE_URL='$(quote_value "$SUBSCRIBE_URL")'
+SUBSCRIBE_USER_AGENT='$(quote_value "$SUBSCRIBE_USER_AGENT")'
+SINGBOX_DEB_URL='$(quote_value "$SINGBOX_DEB_URL")'
+DOWNLOAD_PROXY='$(quote_value "$DOWNLOAD_PROXY")'
+WEBUI_RELEASE_API='$(quote_value "$WEBUI_RELEASE_API")'
+WEBUI_DOWNLOAD_URL='$(quote_value "$WEBUI_DOWNLOAD_URL")'
+EOF
+  mv "$tmp" "$CONF"
+}
+
+create_conf_interactively() {
+  if [ ! -r /dev/tty ] && [ "${ASSUME_DEFAULTS:-0}" != "1" ]; then
+    echo "Missing router.conf and no interactive terminal is available." >&2
+    echo "Run this script directly, or create router.conf from router.conf.example first." >&2
+    exit 1
+  fi
+
+  echo "No router.conf found. Creating one now." >&2
+  echo "Press Enter to keep the value in brackets." >&2
+  echo >&2
+
+  detected_if="$(default_lan_if || true)"
+  detected_ip="$(default_lan_ip "$detected_if" || true)"
+  default_secret="$(random_secret)"
+
+  LAN_IF="$(prompt_value "LAN interface" "${detected_if:-enp3s0}")"
+  LAN_IP="$(prompt_value "Router LAN IP" "${detected_ip:-192.168.3.88}")"
+  LAN_NET="$(prompt_value "LAN subnet" "$(default_lan_net "$LAN_IP")")"
+  PROXY_PORT="$(prompt_value "Proxy port" "7890")"
+  PANEL_PORT="$(prompt_value "Panel port" "9091")"
+  PANEL_SECRET="$(prompt_value "Panel secret" "$default_secret")"
+  DNS1="$(prompt_value "DNS 1" "223.5.5.5")"
+  DNS2="$(prompt_value "DNS 2" "119.29.29.29")"
+
+  SUBSCRIBE_URL=""
+  while [ -z "$SUBSCRIBE_URL" ] && [ ! -f "$ROOT/secrets/outbounds.json" ]; do
+    SUBSCRIBE_URL="$(prompt_value "Clash subscription URL" "")"
+    if [ -z "$SUBSCRIBE_URL" ]; then
+      echo "Subscription URL is required unless secrets/outbounds.json exists." >&2
+    fi
+  done
+
+  SUBSCRIBE_USER_AGENT="$(prompt_value "Subscription user-agent" "clash.meta")"
+  DOWNLOAD_PROXY="$(prompt_value "Download proxy, optional" "")"
+  TUN_NAME="sbtun0"
+  TUN_ADDRESS="28.0.0.1/30"
+  SINGBOX_DEB_URL="https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb"
+  WEBUI_RELEASE_API="https://api.github.com/repos/MetaCubeX/metacubexd/releases/latest"
+  WEBUI_DOWNLOAD_URL="https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz"
+
+  write_conf
+  chmod 0600 "$CONF" 2>/dev/null || true
+  echo >&2
+  echo "Created: $CONF" >&2
+}
+
 if [ ! -f "$CONF" ]; then
-  echo "Missing router.conf. Copy router.conf.example to router.conf and edit it." >&2
-  exit 1
+  create_conf_interactively
 fi
 
 # shellcheck disable=SC1090
@@ -23,8 +151,11 @@ LAN_NET="${LAN_NET:-192.168.3.0/24}"
 DNS1="${DNS1:-223.5.5.5}"
 DNS2="${DNS2:-119.29.29.29}"
 SUBSCRIBE_URL="${SUBSCRIBE_URL:-}"
+SUBSCRIBE_USER_AGENT="${SUBSCRIBE_USER_AGENT:-clash.meta}"
 SINGBOX_DEB_URL="${SINGBOX_DEB_URL:-https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
+WEBUI_RELEASE_API="${WEBUI_RELEASE_API:-https://api.github.com/repos/MetaCubeX/metacubexd/releases/latest}"
+WEBUI_DOWNLOAD_URL="${WEBUI_DOWNLOAD_URL:-https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz}"
 
 download() {
   url="$1"

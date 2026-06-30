@@ -1,179 +1,167 @@
-# Home Router sing-box Installer
+# Home sing-box Router
 
-一键把 Debian 服务器配置成 sing-box TUN 旁路由，并提供：
+把一台 Debian/Ubuntu 服务器变成家用 sing-box 旁路由。
 
-- TUN 旁路由
-- `7890` mixed 显式代理
-- `9091` MetaCubeXD 面板
-- 单网卡旁路由转发/NAT 保活
-- 可配置的 LAN 网卡、网段、端口和面板密钥
+适合这种用法：
 
-## 1. 准备配置
+- 手机把网关设为旁路由 IP 后分流上网
+- 游戏、国内 App 尽量直连
+- 国外流量走订阅节点
+- 用 `sb` 菜单管理，不手改配置文件
+
+## 一键安装
+
+在服务器上执行：
 
 ```bash
-cp router.conf.example router.conf
+curl -fsSL https://raw.githubusercontent.com/samsamsue/home_singbox_router/main/bootstrap.sh | sudo sh
 ```
 
-编辑 `router.conf`：
+如果 GitHub 下载慢，可以临时加下载代理：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/samsamsue/home_singbox_router/main/bootstrap.sh | sudo env DOWNLOAD_PROXY=http://127.0.0.1:7890 sh
+```
+
+脚本会提示输入：
+
+- LAN 网卡
+- 旁路由 LAN IP
+- LAN 网段
+- 代理端口
+- 面板端口
+- 面板密钥
+- DNS
+- Clash/Mihomo 订阅地址
+
+看不懂的地方直接回车，保留默认值即可。订阅地址可以直接填 Clash 可用的订阅链接。
+
+安装完成后会显示：
 
 ```text
-LAN_IF=enp3s0
-LAN_NET=192.168.3.0/24
-LAN_IP=192.168.3.88
-PROXY_PORT=7890
-PANEL_PORT=9091
-PANEL_SECRET=change-me
-SUBSCRIBE_URL='https://example.com/api/v1/client/subscribe?token=...'
+Panel: http://旁路由IP:9091/ui/
+Proxy: http://旁路由IP:7890
+Menu: sudo sb
 ```
 
-## 2. 准备节点
+## 手机怎么设置
 
-推荐方式是在 `router.conf` 里填写 Clash/Mihomo 订阅：
+在家里的 Wi-Fi 高级设置里：
 
 ```text
-SUBSCRIBE_URL='https://example.com/api/v1/client/subscribe?token=...'
-SUBSCRIBE_USER_AGENT=clash.meta
-```
-
-安装时会自动下载订阅并生成 sing-box 节点配置。
-
-也可以手动创建 `secrets/outbounds.json`。它是 sing-box outbound 列表，只放真实代理节点。
-
-如果你已有 Clash/Mihomo 配置，可以转换：
-
-```bash
-mkdir -p secrets
-python3 scripts/extract-outbounds.py /tmp/ShellCrash/config.yaml secrets/outbounds.json
-```
-
-支持当前用到的：
-
-- hysteria2
-- vless reality
-- vless websocket tls
-
-`secrets/` 默认被 `.gitignore` 忽略，不要提交到公开 GitHub。
-
-## 3. 安装
-
-```bash
-sudo ./install.sh
-```
-
-如果 GitHub 下载慢，可以临时指定下载代理：
-
-```bash
-DOWNLOAD_PROXY=http://127.0.0.1:7890 sudo -E ./install.sh
-```
-
-## 4. 客户端设置
-
-家里手机：
-
-```text
-网关：LAN_IP，例如 192.168.3.88
+网关：旁路由 LAN IP，例如 192.168.3.88
 DNS：223.5.5.5 或 119.29.29.29
 ```
 
-目前不要求把 DNS 设为旁路由 IP。
+目前不要求把 DNS 设置成旁路由 IP。
 
-## 5. 面板
+## 管理菜单
+
+安装后运行：
+
+```bash
+sudo sb
+```
+
+菜单功能：
+
+- 查看运行状态
+- 重启 sing-box
+- 查看日志
+- 显示面板和代理地址
+- 用提示输入修改基础设置
+- 更新订阅
+- 更新 MetaCubeXD Web 面板
+- 检查配置
+- 重新应用旁路由转发/NAT
+- 干净卸载
+
+为了兼容习惯，也会创建 `sudo sc`，但推荐记 `sudo sb`。
+
+## Web 面板
 
 打开：
 
 ```text
-http://LAN_IP:9091/ui/
+http://旁路由IP:9091/ui/
 ```
 
 后端地址：
 
 ```text
-http://LAN_IP:9091
+http://旁路由IP:9091
 ```
 
-密钥：`router.conf` 里的 `PANEL_SECRET`。
+密钥就是安装时设置的面板密钥。
 
-如果通过 ZeroTier 远程管理，`sudo sb` 会自动检测 ZeroTier IP 并显示远程面板地址。
+如果通过 ZeroTier 远程管理，`sudo sb` 会自动显示 ZeroTier 面板地址。
 
-## 6. 显式代理
+## 显式代理
+
+代理地址：
 
 ```text
-http://LAN_IP:7890
+http://旁路由IP:7890
 ```
 
-测试：
+Windows 上可以这样测试：
 
 ```powershell
-curl.exe https://api.ipify.org --proxy http://LAN_IP:7890
+curl.exe https://api.ipify.org --proxy http://旁路由IP:7890
 ```
 
-## 7. 管理
+## 卸载
 
-安装后直接运行菜单：
+运行：
 
 ```bash
 sudo sb
 ```
 
-菜单可以：
+选择 `Uninstall cleanly`，按提示输入：
 
-- 查看状态
-- 重启 sing-box
-- 看日志
-- 显示面板/代理地址
-- 用提示输入的方式修改基础配置，回车保留当前值
-- 更新订阅
-- 更新 MetaCubeXD Web 面板
-- 检查配置
-- 重新应用旁路由转发/NAT
-- 干净卸载并自动备份
-
-安装器也会创建兼容命令 `sc`，所以 `sudo sc` 仍然可用；推荐记 `sudo sb`。
-
-命令行管理：
-
-```bash
-./manage.sh status
-./manage.sh restart
-./manage.sh logs
-./manage.sh check
-./manage.sh apply-forward
-./manage.sh update-webui
-./manage.sh uninstall
+```text
+UNINSTALL
 ```
 
-Web 面板更新会从 MetaCubeXD 官方 GitHub Release 下载最新 `compressed-dist.tgz` 并覆盖 `/usr/local/share/metacubexd`。
-如果已经是最新版本，会直接提示无需更新。
+卸载前会自动备份到：
 
-## 8. 卸载
-
-推荐运行菜单：
-
-```bash
-sudo sb
+```text
+/root/home-router-singbox-uninstall-backup-时间.tar.gz
 ```
 
-选择 `Uninstall cleanly`，然后按提示输入 `UNINSTALL` 确认。
+会清理：
 
-卸载会先备份到 `/root/home-router-singbox-uninstall-backup-时间.tar.gz`，再清理：
-
-- sing-box/home-router 服务和 timer
 - `sb`/`sc` 命令
-- `/etc/home-router-singbox`
-- `/etc/sing-box`
-- `/opt/home-router-singbox`
-- `/usr/local/share/metacubexd`
+- home-router systemd 服务和 timer
+- sing-box 配置
+- MetaCubeXD 面板文件
 - 本脚本创建的旁路由转发/NAT 规则
 
-默认会询问是否连 `sing-box` 软件包一起卸载。回车就是不卸载软件包，只清理本项目的服务、配置、命令和规则。
+卸载时会询问是否连 `sing-box` 软件包一起卸载。直接回车就是不卸载软件包，只清理本项目内容。
 
-如果你想跳过菜单直接卸载，并且连软件包一起卸载：
+## 高级用法
+
+如果不想交互输入，可以先准备配置文件：
 
 ```bash
-PURGE_SINGBOX=1 sudo -E /usr/local/sbin/home-router-uninstall.sh
+cp router.conf.example router.conf
+sudo ./install.sh
 ```
 
-## 安全提醒
+配置文件会被安装到：
 
-不要把真实的 `router.conf` 和 `secrets/outbounds.json` 提交到公开仓库。
-公开仓库只适合放模板和脚本。真实节点和密钥请放私有仓库，或单独加密保存。
+```text
+/etc/home-router-singbox/router.conf
+```
+
+真实订阅地址、面板密钥、节点文件不要提交到公开 GitHub。
+
+## 常用命令
+
+```bash
+sudo sb
+systemctl status sing-box
+journalctl -u sing-box -f
+sing-box check -C /etc/sing-box
+```

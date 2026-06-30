@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def load_conf(path: Path) -> dict:
     values = {}
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    for raw in path.read_text(encoding="utf-8-sig").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -19,7 +19,7 @@ def load_conf(path: Path) -> dict:
 
 
 def load_outbounds(path: Path) -> str:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     if isinstance(data, dict):
         data = data.get("outbounds", [])
     if not isinstance(data, list):
@@ -53,7 +53,19 @@ def main() -> None:
     if not outbounds_path.exists():
         raise SystemExit(f"missing {outbounds_path}; create it from your sing-box proxy outbounds")
 
-    values = load_conf(conf_path)
+    values = {
+        "LAN_IF": "enp3s0",
+        "LAN_NET": "192.168.3.0/24",
+        "LAN_IP": "192.168.3.88",
+        "PROXY_PORT": "7890",
+        "PANEL_PORT": "9091",
+        "PANEL_SECRET": "change-me",
+        "TUN_NAME": "sbtun0",
+        "TUN_ADDRESS": "28.0.0.1/30",
+        "DNS1": "223.5.5.5",
+        "DNS2": "119.29.29.29",
+    }
+    values.update(load_conf(conf_path))
     template = (ROOT / "templates" / "sing-box.template.json").read_text(encoding="utf-8")
     values["OUTBOUNDS"] = load_outbounds(outbounds_path)
 
