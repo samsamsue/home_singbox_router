@@ -123,6 +123,7 @@ sudo sb
 - 显示面板/代理地址
 - 用提示输入的方式修改基础配置，回车保留当前值
 - 更新订阅
+- 更新 MetaCubeXD Web 面板
 - 检查配置
 - 重新应用旁路由转发/NAT
 - 干净卸载并自动备份
@@ -137,8 +138,12 @@ sudo sb
 ./manage.sh logs
 ./manage.sh check
 ./manage.sh apply-forward
+./manage.sh update-webui
 ./manage.sh uninstall
 ```
+
+Web 面板更新会从 MetaCubeXD 官方 GitHub Release 下载最新 `compressed-dist.tgz` 并覆盖 `/usr/local/share/metacubexd`。
+如果已经是最新版本，会直接提示无需更新。
 
 ## 8. 卸载
 

@@ -66,6 +66,7 @@ backup_existing_files() {
     /etc/sysctl.d/99-home-lan-bypass-forward.conf \
     /usr/local/sbin/home-lan-bypass-forward.sh \
     /usr/local/sbin/home-router-update-subscription.sh \
+    /usr/local/sbin/home-router-update-webui.sh \
     /usr/local/sbin/home-router-uninstall.sh \
     /usr/local/bin/sb \
     /usr/local/bin/sc
@@ -122,6 +123,7 @@ remove_files() {
     /etc/sysctl.d/99-home-lan-bypass-forward.conf \
     /usr/local/sbin/home-lan-bypass-forward.sh \
     /usr/local/sbin/home-router-update-subscription.sh \
+    /usr/local/sbin/home-router-update-webui.sh \
     /usr/local/bin/sb \
     /usr/local/bin/sc
 

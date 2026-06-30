@@ -89,6 +89,14 @@ update_subscription() {
   apply_config
 }
 
+update_webui() {
+  if [ ! -x /usr/local/sbin/home-router-update-webui.sh ]; then
+    echo "Missing updater: /usr/local/sbin/home-router-update-webui.sh" >&2
+    return 1
+  fi
+  ROUTER_CONF="$CONF" /usr/local/sbin/home-router-update-webui.sh
+}
+
 uninstall_router() {
   if [ ! -x /usr/local/sbin/home-router-uninstall.sh ]; then
     echo "Missing uninstaller: /usr/local/sbin/home-router-uninstall.sh" >&2
@@ -180,10 +188,11 @@ Home sing-box router (sb)
 4) Panel/proxy info
 5) Edit basic settings (prompt input)
 6) Update subscription
-7) Check config
-8) Apply forwarding/NAT rules
-9) Uninstall cleanly
-10) Quit
+7) Update WebUI panel
+8) Check config
+9) Apply forwarding/NAT rules
+10) Uninstall cleanly
+11) Quit
 
 EOF
     printf "Select: "
@@ -195,10 +204,11 @@ EOF
       4) open_info; pause ;;
       5) edit_basic; pause ;;
       6) update_subscription; pause ;;
-      7) sing-box check -C /etc/sing-box; pause ;;
-      8) /usr/local/sbin/home-lan-bypass-forward.sh; echo "Applied."; pause ;;
-      9) uninstall_router; exit 0 ;;
-      10|q|Q) exit 0 ;;
+      7) update_webui; pause ;;
+      8) sing-box check -C /etc/sing-box; pause ;;
+      9) /usr/local/sbin/home-lan-bypass-forward.sh; echo "Applied."; pause ;;
+      10) uninstall_router; exit 0 ;;
+      11|q|Q) exit 0 ;;
       *) echo "Invalid choice."; pause ;;
     esac
   done
