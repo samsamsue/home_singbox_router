@@ -31,6 +31,8 @@ load_conf() {
   PANEL_SECRET="${PANEL_SECRET:-}"
   DNS1="${DNS1:-223.5.5.5}"
   DNS2="${DNS2:-119.29.29.29}"
+  SUBSCRIBE_URL="${SUBSCRIBE_URL:-}"
+  SUBSCRIBE_USER_AGENT="${SUBSCRIBE_USER_AGENT:-clash.meta}"
 }
 
 detect_zt_ip() {
@@ -43,13 +45,16 @@ save_key() {
   value="$2"
   mkdir -p "$(dirname "$CONF")"
   touch "$CONF"
-  if grep -q "^${key}=" "$CONF"; then
-    tmp="${CONF}.tmp"
-    sed "s|^${key}=.*|${key}=${value}|" "$CONF" > "$tmp"
-    mv "$tmp" "$CONF"
-  else
-    printf "%s=%s\n" "$key" "$value" >> "$CONF"
-  fi
+  quoted=$(printf "%s" "$value" | sed "s/'/'\\\\''/g")
+  newline="${key}='${quoted}'"
+  tmp="${CONF}.tmp"
+  awk -v key="$key" -v newline="$newline" '
+    BEGIN { found = 0 }
+    index($0, key "=") == 1 { print newline; found = 1; next }
+    { print }
+    END { if (!found) print newline }
+  ' "$CONF" > "$tmp"
+  mv "$tmp" "$CONF"
 }
 
 prompt_key() {
@@ -68,11 +73,20 @@ apply_config() {
     echo "Missing renderer: $APP_DIR/scripts/render-config.py" >&2
     return 1
   fi
-  ROUTER_CONF="$CONF" OUTPUT="$CONFIG_JSON" python3 "$APP_DIR/scripts/render-config.py"
+  ROUTER_CONF="$CONF" OUTBOUNDS_JSON=/etc/home-router-singbox/outbounds.json OUTPUT="$CONFIG_JSON" python3 "$APP_DIR/scripts/render-config.py"
   sing-box check -C /etc/sing-box
   systemctl restart sing-box
   systemctl restart home-lan-bypass-forward.timer 2>/dev/null || true
   /usr/local/sbin/home-lan-bypass-forward.sh 2>/dev/null || true
+}
+
+update_subscription() {
+  if [ ! -x /usr/local/sbin/home-router-update-subscription.sh ]; then
+    echo "Missing updater: /usr/local/sbin/home-router-update-subscription.sh" >&2
+    return 1
+  fi
+  ROUTER_CONF="$CONF" /usr/local/sbin/home-router-update-subscription.sh
+  apply_config
 }
 
 show_status() {
@@ -94,6 +108,10 @@ show_status() {
   echo "Phone at home:"
   echo "  Gateway: ${LAN_IP}"
   echo "  DNS: ${DNS1} or ${DNS2}"
+  if [ -n "$SUBSCRIBE_URL" ]; then
+    echo
+    echo "Subscription: configured"
+  fi
   echo
   ss -lntup 2>/dev/null | grep -E ":${PROXY_PORT}|:${PANEL_PORT}" || true
 }
@@ -109,9 +127,16 @@ edit_basic() {
   prompt_key PANEL_SECRET "Panel secret" "$PANEL_SECRET"
   prompt_key DNS1 "DNS 1" "$DNS1"
   prompt_key DNS2 "DNS 2" "$DNS2"
+  prompt_key SUBSCRIBE_URL "Clash subscription URL" "$SUBSCRIBE_URL"
+  prompt_key SUBSCRIBE_USER_AGENT "Subscription user-agent" "$SUBSCRIBE_USER_AGENT"
   echo
   echo "Applying..."
-  apply_config
+  load_conf
+  if [ -n "${SUBSCRIBE_URL:-}" ]; then
+    update_subscription
+  else
+    apply_config
+  fi
 }
 
 open_info() {
@@ -146,9 +171,10 @@ Home sing-box router (sb)
 3) Show logs
 4) Panel/proxy info
 5) Edit basic settings (prompt input)
-6) Check config
-7) Apply forwarding/NAT rules
-8) Quit
+6) Update subscription
+7) Check config
+8) Apply forwarding/NAT rules
+9) Quit
 
 EOF
     printf "Select: "
@@ -159,9 +185,10 @@ EOF
       3) journalctl -u sing-box -f ;;
       4) open_info; pause ;;
       5) edit_basic; pause ;;
-      6) sing-box check -C /etc/sing-box; pause ;;
-      7) /usr/local/sbin/home-lan-bypass-forward.sh; echo "Applied."; pause ;;
-      8|q|Q) exit 0 ;;
+      6) update_subscription; pause ;;
+      7) sing-box check -C /etc/sing-box; pause ;;
+      8) /usr/local/sbin/home-lan-bypass-forward.sh; echo "Applied."; pause ;;
+      9|q|Q) exit 0 ;;
       *) echo "Invalid choice."; pause ;;
     esac
   done

@@ -22,6 +22,7 @@ LAN_IF="${LAN_IF:-enp3s0}"
 LAN_NET="${LAN_NET:-192.168.3.0/24}"
 DNS1="${DNS1:-223.5.5.5}"
 DNS2="${DNS2:-119.29.29.29}"
+SUBSCRIBE_URL="${SUBSCRIBE_URL:-}"
 SINGBOX_DEB_URL="${SINGBOX_DEB_URL:-https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
 
@@ -48,13 +49,38 @@ install_singbox() {
   dpkg -i "$tmp"
 }
 
+ensure_python_yaml() {
+  if python3 -c 'import yaml' >/dev/null 2>&1; then
+    return
+  fi
+  apt-get update
+  apt-get install -y python3-yaml
+}
+
 install_singbox
 mkdir -p "$BUILD" /etc/home-router-singbox /etc/sing-box /usr/local/sbin /usr/local/bin /usr/local/share/metacubexd /opt/home-router-singbox
 
 cp "$CONF" /etc/home-router-singbox/router.conf
-python3 "$ROOT/scripts/render-config.py"
-cp "$BUILD/config.json" /etc/sing-box/config.json
 cp -a "$ROOT/scripts" "$ROOT/templates" /opt/home-router-singbox/
+
+ensure_python_yaml
+if [ -n "$SUBSCRIBE_URL" ]; then
+  ROUTER_CONF=/etc/home-router-singbox/router.conf \
+  OUTBOUNDS_JSON=/etc/home-router-singbox/outbounds.json \
+  SUBSCRIPTION_CACHE=/etc/home-router-singbox/subscription.yaml \
+    /opt/home-router-singbox/scripts/update-subscription.sh
+elif [ -f "$ROOT/secrets/outbounds.json" ]; then
+  cp "$ROOT/secrets/outbounds.json" /etc/home-router-singbox/outbounds.json
+else
+  echo "Missing proxy nodes. Set SUBSCRIBE_URL in router.conf or create secrets/outbounds.json." >&2
+  exit 1
+fi
+
+ROUTER_CONF=/etc/home-router-singbox/router.conf \
+OUTBOUNDS_JSON=/etc/home-router-singbox/outbounds.json \
+OUTPUT="$BUILD/config.json" \
+  python3 "$ROOT/scripts/render-config.py"
+cp "$BUILD/config.json" /etc/sing-box/config.json
 
 if [ -d "$ROOT/webui" ]; then
   rm -rf /usr/local/share/metacubexd/*
@@ -63,6 +89,8 @@ fi
 
 cp "$ROOT/scripts/home-lan-bypass-forward.sh" /usr/local/sbin/home-lan-bypass-forward.sh
 chmod 0755 /usr/local/sbin/home-lan-bypass-forward.sh
+cp "$ROOT/scripts/update-subscription.sh" /usr/local/sbin/home-router-update-subscription.sh
+chmod 0755 /usr/local/sbin/home-router-update-subscription.sh
 cp "$ROOT/scripts/sc-menu.sh" /usr/local/bin/sb
 chmod 0755 /usr/local/bin/sb
 ln -sf /usr/local/bin/sb /usr/local/bin/sc

@@ -19,9 +19,14 @@ TUN_ADDRESS=28.0.0.1/30
 DNS1=223.5.5.5
 DNS2=119.29.29.29
 
+# Optional Clash/Mihomo subscription URL. If set, install.sh will download it
+# and generate sing-box outbounds automatically.
+SUBSCRIBE_URL=''
+SUBSCRIBE_USER_AGENT=clash.meta
+
 # Download URL for Debian amd64. Override when you want a newer sing-box.
 SINGBOX_DEB_URL=https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb
 
 # Optional proxy used only when downloading dependencies during install.
 # Example: DOWNLOAD_PROXY=http://127.0.0.1:7890
-DOWNLOAD_PROXY=
+DOWNLOAD_PROXY=''

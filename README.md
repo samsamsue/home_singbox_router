@@ -23,11 +23,21 @@ LAN_IP=192.168.3.88
 PROXY_PORT=7890
 PANEL_PORT=9091
 PANEL_SECRET=change-me
+SUBSCRIBE_URL='https://example.com/api/v1/client/subscribe?token=...'
 ```
 
 ## 2. 准备节点
 
-创建 `secrets/outbounds.json`。它是 sing-box outbound 列表，只放真实代理节点。
+推荐方式是在 `router.conf` 里填写 Clash/Mihomo 订阅：
+
+```text
+SUBSCRIBE_URL='https://example.com/api/v1/client/subscribe?token=...'
+SUBSCRIBE_USER_AGENT=clash.meta
+```
+
+安装时会自动下载订阅并生成 sing-box 节点配置。
+
+也可以手动创建 `secrets/outbounds.json`。它是 sing-box outbound 列表，只放真实代理节点。
 
 如果你已有 Clash/Mihomo 配置，可以转换：
 
@@ -112,6 +122,7 @@ sudo sb
 - 看日志
 - 显示面板/代理地址
 - 用提示输入的方式修改基础配置，回车保留当前值
+- 更新订阅
 - 检查配置
 - 重新应用旁路由转发/NAT
 
