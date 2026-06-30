@@ -20,7 +20,6 @@ cp router.conf.example router.conf
 LAN_IF=enp3s0
 LAN_NET=192.168.3.0/24
 LAN_IP=192.168.3.88
-REMOTE_IP=192.168.192.168
 PROXY_PORT=7890
 PANEL_PORT=9091
 PANEL_SECRET=change-me
@@ -73,27 +72,29 @@ DNS：223.5.5.5 或 119.29.29.29
 打开：
 
 ```text
-http://REMOTE_IP:9091/ui/
+http://LAN_IP:9091/ui/
 ```
 
 后端地址：
 
 ```text
-http://REMOTE_IP:9091
+http://LAN_IP:9091
 ```
 
 密钥：`router.conf` 里的 `PANEL_SECRET`。
 
+如果通过 ZeroTier 远程管理，`sudo sb` 会自动检测 ZeroTier IP 并显示远程面板地址。
+
 ## 6. 显式代理
 
 ```text
-http://REMOTE_IP:7890
+http://LAN_IP:7890
 ```
 
 测试：
 
 ```powershell
-curl.exe https://api.ipify.org --proxy http://REMOTE_IP:7890
+curl.exe https://api.ipify.org --proxy http://LAN_IP:7890
 ```
 
 ## 7. 管理

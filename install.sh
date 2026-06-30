@@ -121,6 +121,6 @@ systemctl enable --now home-lan-bypass-forward.timer
 /usr/local/sbin/home-lan-bypass-forward.sh
 
 echo "Installed."
-echo "Panel: http://${REMOTE_IP:-$LAN_IP}:${PANEL_PORT}/ui/"
-echo "Proxy: http://${REMOTE_IP:-$LAN_IP}:${PROXY_PORT}"
+echo "Panel: http://${LAN_IP}:${PANEL_PORT}/ui/"
+echo "Proxy: http://${LAN_IP}:${PROXY_PORT}"
 echo "Menu: sudo sb"

@@ -26,12 +26,16 @@ load_conf() {
   LAN_IF="${LAN_IF:-enp3s0}"
   LAN_NET="${LAN_NET:-192.168.3.0/24}"
   LAN_IP="${LAN_IP:-192.168.3.88}"
-  REMOTE_IP="${REMOTE_IP:-$LAN_IP}"
   PROXY_PORT="${PROXY_PORT:-7890}"
   PANEL_PORT="${PANEL_PORT:-9091}"
   PANEL_SECRET="${PANEL_SECRET:-}"
   DNS1="${DNS1:-223.5.5.5}"
   DNS2="${DNS2:-119.29.29.29}"
+}
+
+detect_zt_ip() {
+  ip -4 -o addr show 2>/dev/null \
+    | awk '$2 ~ /^zt/ { sub(/\/.*/, "", $4); print $4; exit }'
 }
 
 save_key() {
@@ -76,10 +80,16 @@ show_status() {
   echo "sing-box: $(systemctl is-active sing-box 2>/dev/null || true)"
   echo "ShellCrash: $(systemctl is-active shellcrash.service 2>/dev/null || true)"
   echo
-  echo "Panel: http://${REMOTE_IP}:${PANEL_PORT}/ui/"
-  echo "Backend: http://${REMOTE_IP}:${PANEL_PORT}"
+  echo "Panel: http://${LAN_IP}:${PANEL_PORT}/ui/"
+  echo "Backend: http://${LAN_IP}:${PANEL_PORT}"
   echo "Secret: ${PANEL_SECRET}"
-  echo "Proxy: http://${REMOTE_IP}:${PROXY_PORT}"
+  echo "Proxy: http://${LAN_IP}:${PROXY_PORT}"
+  zt_ip="$(detect_zt_ip || true)"
+  if [ -n "$zt_ip" ]; then
+    echo
+    echo "ZeroTier panel: http://${zt_ip}:${PANEL_PORT}/ui/"
+    echo "ZeroTier proxy: http://${zt_ip}:${PROXY_PORT}"
+  fi
   echo
   echo "Phone at home:"
   echo "  Gateway: ${LAN_IP}"
@@ -94,7 +104,6 @@ edit_basic() {
   prompt_key LAN_IF "LAN interface" "$LAN_IF"
   prompt_key LAN_NET "LAN subnet" "$LAN_NET"
   prompt_key LAN_IP "Router LAN IP" "$LAN_IP"
-  prompt_key REMOTE_IP "Remote/ZeroTier IP" "$REMOTE_IP"
   prompt_key PROXY_PORT "Proxy port" "$PROXY_PORT"
   prompt_key PANEL_PORT "Panel port" "$PANEL_PORT"
   prompt_key PANEL_SECRET "Panel secret" "$PANEL_SECRET"
@@ -107,16 +116,20 @@ edit_basic() {
 
 open_info() {
   load_conf
+  zt_ip="$(detect_zt_ip || true)"
   cat <<EOF
 Open this in your browser:
-  http://${REMOTE_IP}:${PANEL_PORT}/ui/
+  LAN: http://${LAN_IP}:${PANEL_PORT}/ui/
+$(if [ -n "$zt_ip" ]; then printf "  ZeroTier: http://%s:%s/ui/\n" "$zt_ip" "$PANEL_PORT"; fi)
 
 When MetaCubeXD asks for backend:
-  Backend: http://${REMOTE_IP}:${PANEL_PORT}
+  Backend LAN: http://${LAN_IP}:${PANEL_PORT}
+$(if [ -n "$zt_ip" ]; then printf "  Backend ZeroTier: http://%s:%s\n" "$zt_ip" "$PANEL_PORT"; fi)
   Secret:  ${PANEL_SECRET}
 
 Explicit proxy:
-  http://${REMOTE_IP}:${PROXY_PORT}
+  LAN: http://${LAN_IP}:${PROXY_PORT}
+$(if [ -n "$zt_ip" ]; then printf "  ZeroTier: http://%s:%s\n" "$zt_ip" "$PROXY_PORT"; fi)
 EOF
 }
 

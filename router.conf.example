@@ -5,9 +5,6 @@ LAN_IF=enp3s0
 LAN_NET=192.168.3.0/24
 LAN_IP=192.168.3.88
 
-# Remote management address, usually the ZeroTier IP of the router.
-REMOTE_IP=192.168.192.168
-
 # sing-box listeners.
 PROXY_PORT=7890
 PANEL_PORT=9091
