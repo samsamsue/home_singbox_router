@@ -63,8 +63,9 @@ fi
 
 cp "$ROOT/scripts/home-lan-bypass-forward.sh" /usr/local/sbin/home-lan-bypass-forward.sh
 chmod 0755 /usr/local/sbin/home-lan-bypass-forward.sh
-cp "$ROOT/scripts/sc-menu.sh" /usr/local/bin/sc
-chmod 0755 /usr/local/bin/sc
+cp "$ROOT/scripts/sc-menu.sh" /usr/local/bin/sb
+chmod 0755 /usr/local/bin/sb
+ln -sf /usr/local/bin/sb /usr/local/bin/sc
 
 cat > /etc/sysctl.d/99-home-lan-bypass-forward.conf <<SYSCTL
 net.ipv4.ip_forward=1
@@ -122,4 +123,4 @@ systemctl enable --now home-lan-bypass-forward.timer
 echo "Installed."
 echo "Panel: http://${REMOTE_IP:-$LAN_IP}:${PANEL_PORT}/ui/"
 echo "Proxy: http://${REMOTE_IP:-$LAN_IP}:${PROXY_PORT}"
-echo "Menu: sudo sc"
+echo "Menu: sudo sb"

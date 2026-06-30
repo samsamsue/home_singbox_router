@@ -126,13 +126,13 @@ main_menu() {
     clear 2>/dev/null || true
     load_conf
     cat <<EOF
-Home sing-box router
+Home sing-box router (sb)
 ====================
 1) Status
 2) Restart sing-box
 3) Show logs
 4) Panel/proxy info
-5) Edit basic settings
+5) Edit basic settings (prompt input)
 6) Check config
 7) Apply forwarding/NAT rules
 8) Quit

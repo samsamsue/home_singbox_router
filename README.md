@@ -101,7 +101,7 @@ curl.exe https://api.ipify.org --proxy http://REMOTE_IP:7890
 安装后直接运行菜单：
 
 ```bash
-sudo sc
+sudo sb
 ```
 
 菜单可以：
@@ -110,9 +110,11 @@ sudo sc
 - 重启 sing-box
 - 看日志
 - 显示面板/代理地址
-- 修改基础配置
+- 用提示输入的方式修改基础配置，回车保留当前值
 - 检查配置
 - 重新应用旁路由转发/NAT
+
+安装器也会创建兼容命令 `sc`，所以 `sudo sc` 仍然可用；推荐记 `sudo sb`。
 
 命令行管理：
 
