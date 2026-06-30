@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 set -eu
 
 CONF="${ROUTER_CONF:-/etc/home-router-singbox/router.conf}"
@@ -6,6 +6,7 @@ WEBUI_DIR="${WEBUI_DIR:-/usr/local/share/metacubexd}"
 WEBUI_RELEASE_API="${WEBUI_RELEASE_API:-https://api.github.com/repos/MetaCubeX/metacubexd/releases/latest}"
 WEBUI_DOWNLOAD_URL="${WEBUI_DOWNLOAD_URL:-https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
+GITHUB_DOWNLOAD_PREFIX="${GITHUB_DOWNLOAD_PREFIX:-}"
 
 if [ -f "$CONF" ]; then
   # shellcheck disable=SC1090
@@ -16,21 +17,36 @@ WEBUI_DIR="${WEBUI_DIR:-/usr/local/share/metacubexd}"
 WEBUI_RELEASE_API="${WEBUI_RELEASE_API:-https://api.github.com/repos/MetaCubeX/metacubexd/releases/latest}"
 WEBUI_DOWNLOAD_URL="${WEBUI_DOWNLOAD_URL:-https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
+GITHUB_DOWNLOAD_PREFIX="${GITHUB_DOWNLOAD_PREFIX:-}"
+
+download_url() {
+  url="$1"
+  case "$url" in
+    https://github.com/*|https://raw.githubusercontent.com/*)
+      if [ -n "$GITHUB_DOWNLOAD_PREFIX" ]; then
+        printf "%s%s" "$GITHUB_DOWNLOAD_PREFIX" "$url"
+        return
+      fi
+      ;;
+  esac
+  printf "%s" "$url"
+}
 
 download() {
   url="$1"
   out="$2"
+  real_url="$(download_url "$url")"
   if command -v curl >/dev/null 2>&1; then
     if [ -n "$DOWNLOAD_PROXY" ]; then
-      curl -fsSL --connect-timeout 15 --max-time 180 -x "$DOWNLOAD_PROXY" -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -x "$DOWNLOAD_PROXY" -o "$out" "$real_url"
     else
-      curl -fsSL --connect-timeout 15 --max-time 180 -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o "$out" "$real_url"
     fi
   elif command -v wget >/dev/null 2>&1; then
     if [ -n "$DOWNLOAD_PROXY" ]; then
-      HTTPS_PROXY="$DOWNLOAD_PROXY" HTTP_PROXY="$DOWNLOAD_PROXY" wget -q -O "$out" "$url"
+      HTTPS_PROXY="$DOWNLOAD_PROXY" HTTP_PROXY="$DOWNLOAD_PROXY" wget -q -O "$out" "$real_url"
     else
-      wget -q -O "$out" "$url"
+      wget -q -O "$out" "$real_url"
     fi
   else
     echo "Missing curl or wget." >&2
@@ -44,9 +60,9 @@ effective_url() {
     return 1
   fi
   if [ -n "$DOWNLOAD_PROXY" ]; then
-    curl -fsSLI --connect-timeout 15 --max-time 60 -x "$DOWNLOAD_PROXY" -o /dev/null -w "%{url_effective}" "$url"
+    curl -fsSLI --connect-timeout 15 -x "$DOWNLOAD_PROXY" -o /dev/null -w "%{url_effective}" "$url"
   else
-    curl -fsSLI --connect-timeout 15 --max-time 60 -o /dev/null -w "%{url_effective}" "$url"
+    curl -fsSLI --connect-timeout 15 -o /dev/null -w "%{url_effective}" "$url"
   fi
 }
 

@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
@@ -122,6 +122,7 @@ SUBSCRIBE_URL='$(quote_value "$SUBSCRIBE_URL")'
 SUBSCRIBE_USER_AGENT='$(quote_value "$SUBSCRIBE_USER_AGENT")'
 SINGBOX_DEB_URL='$(quote_value "$SINGBOX_DEB_URL")'
 DOWNLOAD_PROXY='$(quote_value "$DOWNLOAD_PROXY")'
+GITHUB_DOWNLOAD_PREFIX='$(quote_value "$GITHUB_DOWNLOAD_PREFIX")'
 WEBUI_RELEASE_API='$(quote_value "$WEBUI_RELEASE_API")'
 WEBUI_DOWNLOAD_URL='$(quote_value "$WEBUI_DOWNLOAD_URL")'
 EOF
@@ -180,8 +181,9 @@ create_conf_interactively() {
     fi
   done
 
-  SUBSCRIBE_USER_AGENT="$(prompt_value "Subscription user-agent" "clash.meta")"
-  DOWNLOAD_PROXY="$(prompt_value "Download proxy, optional" "")"
+  SUBSCRIBE_USER_AGENT="clash.meta"
+  DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
+  GITHUB_DOWNLOAD_PREFIX="${GITHUB_DOWNLOAD_PREFIX:-}"
   TUN_NAME="sbtun0"
   TUN_ADDRESS="28.0.0.1/30"
   SINGBOX_DEB_URL="https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb"
@@ -209,20 +211,36 @@ SUBSCRIBE_URL="${SUBSCRIBE_URL:-}"
 SUBSCRIBE_USER_AGENT="${SUBSCRIBE_USER_AGENT:-clash.meta}"
 SINGBOX_DEB_URL="${SINGBOX_DEB_URL:-https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
+GITHUB_DOWNLOAD_PREFIX="${GITHUB_DOWNLOAD_PREFIX:-}"
 WEBUI_RELEASE_API="${WEBUI_RELEASE_API:-https://api.github.com/repos/MetaCubeX/metacubexd/releases/latest}"
 WEBUI_DOWNLOAD_URL="${WEBUI_DOWNLOAD_URL:-https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz}"
+
+download_url() {
+  url="$1"
+  case "$url" in
+    https://github.com/*|https://raw.githubusercontent.com/*)
+      if [ -n "$GITHUB_DOWNLOAD_PREFIX" ]; then
+        printf "%s%s" "$GITHUB_DOWNLOAD_PREFIX" "$url"
+        return
+      fi
+      ;;
+  esac
+  printf "%s" "$url"
+}
 
 download() {
   url="$1"
   out="$2"
+  real_url="$(download_url "$url")"
+  echo "Downloading: $url" >&2
   if command -v curl >/dev/null 2>&1; then
     if [ -n "$DOWNLOAD_PROXY" ]; then
-      curl -L --connect-timeout 15 --max-time 180 -x "$DOWNLOAD_PROXY" -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -x "$DOWNLOAD_PROXY" -o "$out" "$real_url"
     else
-      curl -L --connect-timeout 15 --max-time 180 -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o "$out" "$real_url"
     fi
   else
-    wget -O "$out" "$url"
+    wget -q -O "$out" "$real_url"
   fi
 }
 

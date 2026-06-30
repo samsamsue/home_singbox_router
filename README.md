@@ -23,6 +23,12 @@ curl -fsSL https://raw.githubusercontent.com/samsamsue/home_singbox_router/main/
 curl -fsSL https://raw.githubusercontent.com/samsamsue/home_singbox_router/main/bootstrap.sh | sudo env DOWNLOAD_PROXY=http://127.0.0.1:7890 sh
 ```
 
+也可以使用 GitHub 下载加速前缀：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/samsamsue/home_singbox_router/main/bootstrap.sh | sudo env GITHUB_DOWNLOAD_PREFIX=https://你的加速地址/ sh
+```
+
 脚本会提示输入：
 
 - 代理端口

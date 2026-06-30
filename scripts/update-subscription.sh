@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 set -eu
 
 APP_DIR="${APP_DIR:-/opt/home-router-singbox}"
@@ -30,12 +30,12 @@ download() {
   out="$2"
   if command -v curl >/dev/null 2>&1; then
     if [ -n "$DOWNLOAD_PROXY" ]; then
-      curl -L --connect-timeout 15 --max-time 180 -A "$SUBSCRIBE_USER_AGENT" -x "$DOWNLOAD_PROXY" -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -A "$SUBSCRIBE_USER_AGENT" -x "$DOWNLOAD_PROXY" -o "$out" "$url"
     else
-      curl -L --connect-timeout 15 --max-time 180 -A "$SUBSCRIBE_USER_AGENT" -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -A "$SUBSCRIBE_USER_AGENT" -o "$out" "$url"
     fi
   else
-    wget -U "$SUBSCRIBE_USER_AGENT" -O "$out" "$url"
+    wget -q -U "$SUBSCRIBE_USER_AGENT" -O "$out" "$url"
   fi
 }
 

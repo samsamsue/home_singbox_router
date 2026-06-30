@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 set -eu
 
 REPO="${REPO:-samsamsue/home_singbox_router}"
@@ -6,6 +6,7 @@ BRANCH="${BRANCH:-main}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/home-router-singbox-installer}"
 ARCHIVE_URL="${ARCHIVE_URL:-https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
+GITHUB_DOWNLOAD_PREFIX="${GITHUB_DOWNLOAD_PREFIX:-}"
 
 if [ "$(id -u)" != "0" ]; then
   echo "Run as root:" >&2
@@ -29,11 +30,18 @@ ensure_downloader() {
 download() {
   url="$1"
   out="$2"
+  case "$url" in
+    https://github.com/*|https://raw.githubusercontent.com/*)
+      if [ -n "$GITHUB_DOWNLOAD_PREFIX" ]; then
+        url="${GITHUB_DOWNLOAD_PREFIX}${url}"
+      fi
+      ;;
+  esac
   if command -v curl >/dev/null 2>&1; then
     if [ -n "$DOWNLOAD_PROXY" ]; then
-      curl -fsSL --connect-timeout 15 --max-time 180 -x "$DOWNLOAD_PROXY" -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -x "$DOWNLOAD_PROXY" -o "$out" "$url"
     else
-      curl -fsSL --connect-timeout 15 --max-time 180 -o "$out" "$url"
+      curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 15 -o "$out" "$url"
     fi
   else
     if [ -n "$DOWNLOAD_PROXY" ]; then

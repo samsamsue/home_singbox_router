@@ -31,6 +31,10 @@ SINGBOX_DEB_URL=https://github.com/SagerNet/sing-box/releases/download/v1.13.14/
 # Example: DOWNLOAD_PROXY=http://127.0.0.1:7890
 DOWNLOAD_PROXY=''
 
+# Optional GitHub download accelerator prefix.
+# Example: GITHUB_DOWNLOAD_PREFIX=https://your-accelerator.example/
+GITHUB_DOWNLOAD_PREFIX=''
+
 # MetaCubeXD static WebUI update source.
 WEBUI_RELEASE_API=https://api.github.com/repos/MetaCubeX/metacubexd/releases/latest
 WEBUI_DOWNLOAD_URL=https://github.com/MetaCubeX/metacubexd/releases/latest/download/compressed-dist.tgz
