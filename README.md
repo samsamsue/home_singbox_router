@@ -25,14 +25,13 @@ curl -fsSL https://raw.githubusercontent.com/samsamsue/home_singbox_router/main/
 
 脚本会提示输入：
 
-- LAN 网卡
-- 旁路由 LAN IP
-- LAN 网段
 - 代理端口
 - 面板端口
 - 面板密钥
-- DNS
 - Clash/Mihomo 订阅地址
+
+LAN 网卡、旁路由 LAN IP、LAN 网段会自动检测。正常直接回车确认即可；检测不对时再选择修改。
+DNS 默认使用 `223.5.5.5` 和 `119.29.29.29`，安装时不用填。
 
 看不懂的地方直接回车，保留默认值即可。订阅地址可以直接填 Clash 可用的订阅链接。
 

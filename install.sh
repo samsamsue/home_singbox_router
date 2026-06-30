@@ -34,6 +34,25 @@ prompt_value() {
   fi
 }
 
+prompt_yes_no() {
+  label="$1"
+  default="${2:-n}"
+  if [ "$default" = "y" ]; then
+    suffix="[Y/n]"
+  else
+    suffix="[y/N]"
+  fi
+  printf "%s %s: " "$label" "$suffix" >/dev/tty 2>/dev/null || printf "%s %s: " "$label" "$suffix" >&2
+  tty_read answer || answer=""
+  if [ -z "$answer" ]; then
+    answer="$default"
+  fi
+  case "$answer" in
+    y|Y|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 quote_value() {
   printf "%s" "$1" | sed "s/'/'\\\\''/g"
 }
@@ -49,16 +68,32 @@ default_lan_ip() {
   fi
 }
 
-default_lan_net() {
+default_lan_cidr() {
+  iface="$1"
+  if [ -n "$iface" ]; then
+    ip -4 -o addr show dev "$iface" 2>/dev/null | awk '{ print $4; exit }'
+  fi
+}
+
+cidr_network() {
+  cidr="$1"
+  python3 - "$cidr" <<'PY' 2>/dev/null || true
+import ipaddress
+import sys
+
+try:
+    print(ipaddress.ip_interface(sys.argv[1]).network)
+except Exception:
+    pass
+PY
+}
+
+fallback_lan_net() {
   ipaddr="$1"
-  case "$ipaddr" in
-    *.*.*.*)
-      printf "%s\n" "$ipaddr" | awk -F. '{ print $1 "." $2 "." $3 ".0/24" }'
-      ;;
-    *)
-      printf "192.168.3.0/24"
-      ;;
-  esac
+  printf "%s\n" "$ipaddr" | awk -F. '
+    NF == 4 { print $1 "." $2 "." $3 ".0/24"; ok = 1 }
+    END { if (!ok) print "192.168.3.0/24" }
+  '
 }
 
 random_secret() {
@@ -105,17 +140,37 @@ create_conf_interactively() {
   echo >&2
 
   detected_if="$(default_lan_if || true)"
+  detected_cidr="$(default_lan_cidr "$detected_if" || true)"
   detected_ip="$(default_lan_ip "$detected_if" || true)"
+  detected_net="$(cidr_network "$detected_cidr")"
+  if [ -z "$detected_net" ]; then
+    detected_net="$(fallback_lan_net "${detected_ip:-192.168.3.88}")"
+  fi
   default_secret="$(random_secret)"
 
-  LAN_IF="$(prompt_value "LAN interface" "${detected_if:-enp3s0}")"
-  LAN_IP="$(prompt_value "Router LAN IP" "${detected_ip:-192.168.3.88}")"
-  LAN_NET="$(prompt_value "LAN subnet" "$(default_lan_net "$LAN_IP")")"
+  LAN_IF="${detected_if:-enp3s0}"
+  LAN_IP="${detected_ip:-192.168.3.88}"
+  LAN_NET="${detected_net:-192.168.3.0/24}"
+
+  echo "Detected network:" >&2
+  echo "  LAN interface: $LAN_IF" >&2
+  echo "  Router LAN IP: $LAN_IP" >&2
+  echo "  LAN subnet:    $LAN_NET" >&2
+  echo >&2
+  if prompt_yes_no "Change these network settings?" "n"; then
+    LAN_IF="$(prompt_value "LAN interface" "$LAN_IF")"
+    LAN_IP="$(prompt_value "Router LAN IP" "$LAN_IP")"
+    LAN_NET="$(prompt_value "LAN subnet" "$LAN_NET")"
+  fi
+
+  DNS1="223.5.5.5"
+  DNS2="119.29.29.29"
+  echo "DNS: $DNS1, $DNS2" >&2
+  echo >&2
+
   PROXY_PORT="$(prompt_value "Proxy port" "7890")"
   PANEL_PORT="$(prompt_value "Panel port" "9091")"
   PANEL_SECRET="$(prompt_value "Panel secret" "$default_secret")"
-  DNS1="$(prompt_value "DNS 1" "223.5.5.5")"
-  DNS2="$(prompt_value "DNS 2" "119.29.29.29")"
 
   SUBSCRIBE_URL=""
   while [ -z "$SUBSCRIBE_URL" ] && [ ! -f "$ROOT/secrets/outbounds.json" ]; do
