@@ -18,8 +18,10 @@ TUN_ADDRESS=28.0.0.1/30
 DNS1=223.5.5.5
 DNS2=119.29.29.29
 
-# 可选：Clash/Mihomo 订阅地址。填写后安装时会自动下载订阅并生成 sing-box 节点。
+# 可选：订阅/节点地址。支持 Clash/Mihomo 订阅、v2ray base64 订阅、vmess:// 链接。
+# 多个地址用空格分隔。
 SUBSCRIBE_URL=''
+SUBSCRIBE_URLS=''
 SUBSCRIBE_USER_AGENT=clash.meta
 
 # Debian amd64 的 sing-box 安装包地址。需要新版 sing-box 时可以改这里。

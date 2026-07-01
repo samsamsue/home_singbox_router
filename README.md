@@ -51,12 +51,13 @@ curl -fsSL https://raw.githubusercontent.com/samsamsue/BypassProxy/main/bootstra
 - 代理端口
 - 面板端口
 - 面板密钥，默认 `abc123`
-- Clash/Mihomo 订阅地址
+- 订阅/节点地址
 
 LAN 网卡、旁路由 LAN IP、LAN 网段会自动检测。正常直接回车确认即可；检测不对时再选择修改。
 DNS 默认使用 `223.5.5.5` 和 `119.29.29.29`，安装时不用填。
 
-看不懂的地方直接回车，保留默认值即可。订阅地址可以直接填 Clash 可用的订阅链接。
+看不懂的地方直接回车，保留默认值即可。订阅地址可以填 Clash/Mihomo 订阅、v2ray base64 订阅，或直接填 `vmess://` 节点链接。
+多个订阅/节点地址用空格分隔。
 
 安装完成后会显示：
 
@@ -106,7 +107,7 @@ sudo bp
 
 几个“更新”的区别：
 
-- 更新订阅：重新拉取你的 Clash/Mihomo 订阅并生成节点
+- 更新订阅：重新拉取订阅/节点地址并生成节点，支持多个地址和 `vmess://`
 - 更新国内分流规则：检查 `geosite-cn`、`geoip-cn` 是否有新版本，有变化才下载
 - 更新 Web 面板：检查 MetaCubeXD 最新版本，有新版本才更新
 - 更新本项目脚本：检查 GitHub 上这个安装器有没有新提交，有新版本才更新

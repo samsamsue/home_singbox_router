@@ -111,6 +111,7 @@ TUN_ADDRESS='$(quote_value "$TUN_ADDRESS")'
 DNS1='$(quote_value "$DNS1")'
 DNS2='$(quote_value "$DNS2")'
 SUBSCRIBE_URL='$(quote_value "$SUBSCRIBE_URL")'
+SUBSCRIBE_URLS='$(quote_value "$SUBSCRIBE_URLS")'
 SUBSCRIBE_USER_AGENT='$(quote_value "$SUBSCRIBE_USER_AGENT")'
 SINGBOX_DEB_URL='$(quote_value "$SINGBOX_DEB_URL")'
 DOWNLOAD_PROXY='$(quote_value "$DOWNLOAD_PROXY")'
@@ -165,12 +166,13 @@ create_conf_interactively() {
 
   SUBSCRIBE_URL=""
   while [ -z "$SUBSCRIBE_URL" ] && [ ! -f "$ROOT/secrets/outbounds.json" ]; do
-    SUBSCRIBE_URL="$(prompt_value "Clash 订阅地址" "")"
+    SUBSCRIBE_URL="$(prompt_value "订阅/节点地址" "")"
     if [ -z "$SUBSCRIBE_URL" ]; then
-      echo "需要填写订阅地址；除非已经存在 secrets/outbounds.json。" >&2
+      echo "需要填写订阅/节点地址；除非已经存在 secrets/outbounds.json。" >&2
     fi
   done
 
+  SUBSCRIBE_URLS=""
   SUBSCRIBE_USER_AGENT="clash.meta"
   DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
   GITHUB_DOWNLOAD_PREFIX="${GITHUB_DOWNLOAD_PREFIX:-}"
@@ -198,6 +200,7 @@ LAN_NET="${LAN_NET:-192.168.3.0/24}"
 DNS1="${DNS1:-223.5.5.5}"
 DNS2="${DNS2:-119.29.29.29}"
 SUBSCRIBE_URL="${SUBSCRIBE_URL:-}"
+SUBSCRIBE_URLS="${SUBSCRIBE_URLS:-}"
 SUBSCRIBE_USER_AGENT="${SUBSCRIBE_USER_AGENT:-clash.meta}"
 SINGBOX_DEB_URL="${SINGBOX_DEB_URL:-https://github.com/SagerNet/sing-box/releases/download/v1.13.14/sing-box_1.13.14_linux_amd64.deb}"
 DOWNLOAD_PROXY="${DOWNLOAD_PROXY:-}"
@@ -309,15 +312,16 @@ if [ -f "$ROOT/.bypassproxy-version" ]; then
 fi
 
 ensure_python_yaml
-if [ -n "$SUBSCRIBE_URL" ]; then
+if [ -n "$SUBSCRIBE_URL" ] || [ -n "$SUBSCRIBE_URLS" ]; then
   ROUTER_CONF=/etc/bypassproxy/router.conf \
   OUTBOUNDS_JSON=/etc/bypassproxy/outbounds.json \
   SUBSCRIPTION_CACHE=/etc/bypassproxy/subscription.yaml \
+  SUBSCRIPTION_CACHE_DIR=/etc/bypassproxy/subscriptions.d \
     /opt/bypassproxy/scripts/update-subscription.sh
 elif [ -f "$ROOT/secrets/outbounds.json" ]; then
   cp "$ROOT/secrets/outbounds.json" /etc/bypassproxy/outbounds.json
 else
-  echo "缺少代理节点。请在 router.conf 设置 SUBSCRIBE_URL，或创建 secrets/outbounds.json。" >&2
+  echo "缺少代理节点。请在 router.conf 设置 SUBSCRIBE_URL/SUBSCRIBE_URLS，或创建 secrets/outbounds.json。" >&2
   exit 1
 fi
 

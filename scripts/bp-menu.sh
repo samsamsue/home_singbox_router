@@ -32,6 +32,7 @@ load_conf() {
   DNS1="${DNS1:-223.5.5.5}"
   DNS2="${DNS2:-119.29.29.29}"
   SUBSCRIBE_URL="${SUBSCRIBE_URL:-}"
+  SUBSCRIBE_URLS="${SUBSCRIBE_URLS:-}"
   SUBSCRIBE_USER_AGENT="${SUBSCRIBE_USER_AGENT:-clash.meta}"
 }
 
@@ -182,7 +183,7 @@ show_status() {
   echo "家里手机设置："
   echo "  网关：${LAN_IP}"
   echo "  DNS：${DNS1} 或 ${DNS2}"
-  if [ -n "$SUBSCRIBE_URL" ]; then
+  if [ -n "$SUBSCRIBE_URL" ] || [ -n "$SUBSCRIBE_URLS" ]; then
     echo
     echo "订阅：已配置"
   fi
@@ -201,12 +202,13 @@ edit_basic() {
   prompt_key PANEL_SECRET "面板密钥" "$PANEL_SECRET"
   prompt_key DNS1 "DNS 1" "$DNS1"
   prompt_key DNS2 "DNS 2" "$DNS2"
-  prompt_key SUBSCRIBE_URL "Clash 订阅地址" "$SUBSCRIBE_URL"
+  prompt_key SUBSCRIBE_URL "订阅/节点地址" "$SUBSCRIBE_URL"
+  prompt_key SUBSCRIBE_URLS "更多订阅/节点地址" "$SUBSCRIBE_URLS"
   prompt_key SUBSCRIBE_USER_AGENT "订阅 User-Agent" "$SUBSCRIBE_USER_AGENT"
   echo
   echo "正在应用配置..."
   load_conf
-  if [ -n "${SUBSCRIBE_URL:-}" ]; then
+  if [ -n "${SUBSCRIBE_URL:-}" ] || [ -n "${SUBSCRIBE_URLS:-}" ]; then
     update_subscription
   else
     apply_config
