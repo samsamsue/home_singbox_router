@@ -200,6 +200,15 @@ def action_steps(action: str, data: dict) -> list[tuple[str, list[str], int, dic
         return [("检查配置", ["sing-box", "check", "-C", "/etc/sing-box"], 60, None)]
     if action == "restart-sing-box":
         return [("重启 sing-box", ["systemctl", "restart", "sing-box"], 40, None)]
+    if action == "pause-proxy":
+        return [("暂停代理服务", ["systemctl", "disable", "--now", "sing-box"], 40, None)]
+    if action == "resume-proxy":
+        return [
+            ("生成配置", ["python3", str(APP_DIR / "scripts/render-config.py")], 60, {"ROUTER_CONF": str(CONF), "OUTBOUNDS_JSON": str(OUTBOUNDS_JSON), "OUTPUT": str(SING_BOX_CONFIG)}),
+            ("检查配置", ["sing-box", "check", "-C", "/etc/sing-box"], 60, None),
+            ("恢复代理服务", ["systemctl", "enable", "--now", "sing-box"], 40, None),
+            ("应用转发/NAT", ["/usr/local/sbin/bypassproxy-forward.sh"], 60, router_env),
+        ]
     if action == "update-rulesets":
         return [("更新国内分流规则", ["/usr/local/sbin/bypassproxy-update-rulesets.sh"], 180, router_env)]
     if action == "update-webui":
@@ -687,6 +696,18 @@ class Handler(SimpleHTTPRequestHandler):
             return result
         if path == "/api/actions/restart-sing-box":
             return run_command(["systemctl", "restart", "sing-box"], timeout=40)
+        if path == "/api/actions/pause-proxy":
+            return run_command(["systemctl", "disable", "--now", "sing-box"], timeout=40)
+        if path == "/api/actions/resume-proxy":
+            result = self.handle_post("/api/actions/apply-config", {})
+            if result["ok"]:
+                enable = run_command(["systemctl", "enable", "--now", "sing-box"], timeout=40)
+                forward = run_command(["/usr/local/sbin/bypassproxy-forward.sh"], timeout=60, env={"ROUTER_CONF": str(CONF)})
+                result["enable"] = enable
+                result["forward"] = forward
+                result["ok"] = enable["ok"] and forward["ok"]
+                result["output"] = (result["output"] + "\n" + enable["output"] + "\n" + forward["output"]).strip()
+            return result
         if path == "/api/actions/check-config":
             return run_command(["sing-box", "check", "-C", "/etc/sing-box"], timeout=60)
         if path == "/api/actions/update-rulesets":

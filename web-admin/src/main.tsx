@@ -18,8 +18,13 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "./lib";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib";
 import "./styles.css";
 
 type Status = {
@@ -60,71 +65,6 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "请求失败");
   return data as T;
-}
-
-const buttonVariants = cva(
-  "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        secondary: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-      },
-      size: { default: "h-9 px-3", icon: "h-9 w-9 px-0", sm: "h-8 px-2.5" },
-    },
-    defaultVariants: { variant: "default", size: "default" },
-  },
-);
-
-function Button({
-  className,
-  variant,
-  size,
-  busy,
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & { busy?: boolean }) {
-  return (
-    <button className={cn(buttonVariants({ variant, size }), className)} disabled={busy || props.disabled} {...props}>
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-      {children}
-    </button>
-  );
-}
-
-function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <section className={cn("rounded-lg border bg-card text-card-foreground shadow-panel", className)} {...props} />;
-}
-
-function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex items-start justify-between gap-4 border-b px-5 py-4", className)} {...props} />;
-}
-
-function CardTitle({ children, description }: { children: React.ReactNode; description?: React.ReactNode }) {
-  return (
-    <div className="min-w-0 space-y-1">
-      <h2 className="text-base font-semibold leading-none tracking-normal">{children}</h2>
-      {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-    </div>
-  );
-}
-
-function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5", className)} {...props} />;
-}
-
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" {...props} />;
-}
-
-function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" {...props} />;
-}
-
-function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn("grid gap-2 text-sm font-medium leading-none", className)} {...props} />;
 }
 
 function StatusBadge({ value }: { value: string }) {
@@ -169,16 +109,16 @@ function DialogShell({
   wide?: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end bg-slate-950/45 p-0 sm:place-items-center sm:p-4">
-      <div className={cn("max-h-[92vh] w-full overflow-hidden rounded-t-lg border bg-background shadow-xl sm:rounded-lg", wide ? "sm:max-w-[760px]" : "sm:max-w-[520px]")}>
-        <div className="border-b px-5 py-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
-        </div>
-        <div className="max-h-[calc(92vh-132px)] overflow-auto p-5">{children}</div>
-        <div className="flex justify-end gap-2 border-t px-5 py-4">{footer || <Button variant="secondary" onClick={onClose}>关闭</Button>}</div>
-      </div>
-    </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent wide={wide}>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
+          {description ? <DialogDescription className="mt-1 text-sm text-muted-foreground">{description}</DialogDescription> : null}
+        </DialogHeader>
+        <DialogBody>{children}</DialogBody>
+        <DialogFooter>{footer || <Button variant="secondary" onClick={onClose}>关闭</Button>}</DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -393,6 +333,18 @@ function ControlCenter({
       description: "代理服务异常、配置应用后可用它恢复服务。",
       icon: Power,
       onClick: () => openAction({ open: true, action: "restart-sing-box", title: "重启 sing-box", description: "重启代理服务，通常用于配置修改后恢复服务。", confirmText: "重启" }),
+    },
+    {
+      title: "暂停代理",
+      description: "停止 sing-box，不停止 Web 管理页。家里设备会暂时不能走旁路由。",
+      icon: Power,
+      onClick: () => openAction({ open: true, action: "pause-proxy", title: "暂停代理", description: "只停止 sing-box 代理服务，Web 管理页仍可打开，之后可以点“恢复代理”。", confirmText: "暂停代理", dangerous: true }),
+    },
+    {
+      title: "恢复代理",
+      description: "重新生成并检查配置，启动 sing-box，再应用转发/NAT。",
+      icon: RefreshCcw,
+      onClick: () => openAction({ open: true, action: "resume-proxy", title: "恢复代理", description: "启动 sing-box 并重新应用旁路由转发规则。", confirmText: "恢复代理" }),
     },
     {
       title: "节点面板",
@@ -644,13 +596,17 @@ function BasicSettingsDialog({ onClose, setResult }: { onClose: () => void; setR
           <div className="grid gap-4 sm:grid-cols-2">
             <Label className="sm:col-span-2">
               LAN 网卡
-              <Select value={settings.LAN_IF} onChange={(event) => chooseInterface(event.target.value)} disabled={busy || interfaces.length === 0}>
-                {interfaces.length === 0 ? <option value="">未识别到可用网卡</option> : null}
-                {interfaces.map((item) => (
-                  <option key={`${item.name}-${item.cidr}`} value={item.name}>
-                    {item.name} - {item.address}
-                  </option>
-                ))}
+              <Select value={settings.LAN_IF} onValueChange={chooseInterface} disabled={busy || interfaces.length === 0}>
+                <SelectTrigger>
+                  <SelectValue placeholder="未识别到可用网卡" />
+                </SelectTrigger>
+                <SelectContent>
+                  {interfaces.map((item) => (
+                    <SelectItem key={`${item.name}-${item.cidr}`} value={item.name}>
+                      {item.name} - {item.address}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </Label>
             <div className="rounded-md border bg-background px-3 py-2">

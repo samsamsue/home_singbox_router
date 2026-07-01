@@ -327,6 +327,22 @@ check_config() {
   return 1
 }
 
+pause_proxy() {
+  echo "正在暂停 sing-box 代理服务..."
+  systemctl disable --now sing-box
+  echo "已暂停代理服务。Web 管理页仍会保留。"
+}
+
+resume_proxy() {
+  echo "正在恢复 sing-box 代理服务..."
+  apply_config
+  systemctl enable --now sing-box
+  if [ -x /usr/local/sbin/bypassproxy-forward.sh ]; then
+    ROUTER_CONF="$CONF" /usr/local/sbin/bypassproxy-forward.sh
+  fi
+  echo "已恢复代理服务。"
+}
+
 update_subscription() {
   if [ ! -x /usr/local/sbin/bypassproxy-update-subscription.sh ]; then
     echo "缺少订阅更新脚本：/usr/local/sbin/bypassproxy-update-subscription.sh" >&2
@@ -566,48 +582,61 @@ main_menu() {
     clear 2>/dev/null || true
     load_conf
     cat <<EOF
-BypassProxy 旁路由代理助手 (bp)
-==============================
-1) 查看状态
-2) 重启 sing-box
-3) 查看日志
-4) 显示入口地址
-5) 显示登录密钥
-6) 修改基础设置（提示输入）
-7) 订阅/节点管理
-8) 更新订阅
-9) 更新国内分流规则
-10) 更新节点面板(MetaCubeXD)
-11) 管理后台
-12) 更新本项目脚本
-13) 检查配置
-14) 网络诊断
-15) 一键修复
-16) 应用旁路由转发/NAT
-17) 干净卸载
-18) 退出
+BypassProxy 管理菜单 (bp)
+========================
+常用控制
+  1) 查看状态
+  2) 暂停代理
+  3) 恢复代理
+  4) 重启代理
+  5) 网络诊断
+
+订阅和节点
+  6) 订阅/节点管理
+  7) 更新订阅并应用
+  8) 更新国内分流规则
+  9) 更新节点面板(MetaCubeXD)
+
+入口和设置
+ 10) 显示入口地址
+ 11) 管理后台
+ 12) 修改基础设置
+ 13) 显示登录密钥
+
+维护修复
+ 14) 检查配置
+ 15) 应用旁路由转发/NAT
+ 16) 一键修复
+ 17) 查看日志
+ 18) 更新本项目脚本
+
+危险操作
+ 19) 干净卸载
+ 20) 退出
 EOF
     printf "请选择："
     read choice || exit 0
     case "$choice" in
       1) show_status; pause ;;
-      2) apply_config; echo "已重启。"; pause ;;
-      3) journalctl -u sing-box -f ;;
-      4) open_info; pause ;;
-      5) show_panel_secret; pause ;;
-      6) edit_basic; pause ;;
-      7) subscription_manager ;;
-      8) update_subscription; pause ;;
-      9) update_rulesets; apply_config; pause ;;
-      10) update_webui; pause ;;
+      2) pause_proxy; pause ;;
+      3) resume_proxy; pause ;;
+      4) apply_config; echo "已重启。"; pause ;;
+      5) diagnose_network; pause ;;
+      6) subscription_manager ;;
+      7) update_subscription; pause ;;
+      8) update_rulesets; apply_config; pause ;;
+      9) update_webui; pause ;;
+      10) open_info; pause ;;
       11) admin_web_menu ;;
-      12) update_core; pause ;;
-      13) check_config; pause ;;
-      14) diagnose_network; pause ;;
-      15) repair_system; pause ;;
-      16) /usr/local/sbin/bypassproxy-forward.sh; echo "已应用。"; pause ;;
-      17) uninstall_router; exit 0 ;;
-      18|q|Q) exit 0 ;;
+      12) edit_basic; pause ;;
+      13) show_panel_secret; pause ;;
+      14) check_config; pause ;;
+      15) /usr/local/sbin/bypassproxy-forward.sh; echo "已应用。"; pause ;;
+      16) repair_system; pause ;;
+      17) journalctl -u sing-box -f ;;
+      18) update_core; pause ;;
+      19) uninstall_router; exit 0 ;;
+      20|q|Q) exit 0 ;;
       *) echo "无效选择。"; pause ;;
     esac
   done
