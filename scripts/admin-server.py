@@ -7,6 +7,7 @@ import shlex
 import signal
 import subprocess
 import time
+import ipaddress
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -74,6 +75,79 @@ def save_conf_key(key: str, value: str) -> None:
         CONF.chmod(0o600)
     except OSError:
         pass
+
+
+def cidr_to_network(cidr: str) -> str:
+    try:
+        return str(ipaddress.ip_interface(cidr).network)
+    except ValueError:
+        return ""
+
+
+def is_virtual_or_tunnel_interface(name: str) -> bool:
+    prefixes = (
+        "br-",
+        "docker",
+        "dummy",
+        "ip6tnl",
+        "lo",
+        "sit",
+        "sbtun",
+        "tailscale",
+        "tun",
+        "veth",
+        "virbr",
+        "wg",
+        "zt",
+    )
+    return name == "lo" or name.startswith(prefixes)
+
+
+def list_network_interfaces() -> list[dict[str, str]]:
+    result = run_command(["ip", "-4", "-o", "addr", "show"], timeout=8)
+    if not result["ok"]:
+        return []
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for line in result["stdout"].splitlines():
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+        name = parts[1]
+        cidr = parts[3]
+        if is_virtual_or_tunnel_interface(name):
+            continue
+        address = cidr.split("/", 1)[0]
+        network = cidr_to_network(cidr)
+        key = f"{name}:{cidr}"
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({"name": name, "address": address, "cidr": cidr, "network": network})
+    return items
+
+
+def detect_lan_settings(preferred_if: str = "") -> dict[str, str]:
+    interfaces = list_network_interfaces()
+    chosen = None
+    if preferred_if:
+        chosen = next((item for item in interfaces if item["name"] == preferred_if), None)
+    if chosen is None:
+        route = run_command(["ip", "route", "show", "default"], timeout=8)
+        default_if = ""
+        if route["ok"]:
+            match = re.search(r"\bdev\s+(\S+)", route["stdout"])
+            if match:
+                default_if = match.group(1)
+        if default_if:
+            chosen = next((item for item in interfaces if item["name"] == default_if), None)
+    if chosen is None and interfaces:
+        chosen = interfaces[0]
+    return {
+        "LAN_IF": chosen["name"] if chosen else "",
+        "LAN_IP": chosen["address"] if chosen else "",
+        "LAN_NET": chosen["network"] if chosen else "",
+    }
 
 
 def run_command(args: list[str], timeout: int = 120, env: dict[str, str] | None = None) -> dict:
@@ -423,7 +497,13 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             conf = read_conf()
             keys = ["LAN_IF", "LAN_NET", "LAN_IP", "PROXY_PORT", "PANEL_PORT", "ADMIN_PORT", "DNS1", "DNS2", "SUBSCRIBE_USER_AGENT", "DOWNLOAD_PROXY"]
-            self.send_json({"settings": {key: conf.get(key, "") for key in keys}})
+            interfaces = list_network_interfaces()
+            detected = detect_lan_settings(conf.get("LAN_IF", ""))
+            settings = {key: conf.get(key, "") for key in keys}
+            for key, value in detected.items():
+                if not settings.get(key):
+                    settings[key] = value
+            self.send_json({"settings": settings, "interfaces": interfaces, "detected": detected})
             return
         if parsed.path == "/api/logs":
             if not self.require_auth():
@@ -528,6 +608,11 @@ class Handler(SimpleHTTPRequestHandler):
             save_conf_key("ADMIN_PORT", port)
             return {"ok": True, "message": "端口已保存，重启 Web 管理页后生效"}
         if path == "/api/settings/basic":
+            selected_if = str(data.get("LAN_IF") or "").strip()
+            detected = detect_lan_settings(selected_if)
+            if selected_if and detected.get("LAN_IF") == selected_if:
+                data["LAN_IP"] = detected.get("LAN_IP") or data.get("LAN_IP", "")
+                data["LAN_NET"] = detected.get("LAN_NET") or data.get("LAN_NET", "")
             allowed = {
                 "LAN_IF": r"^[A-Za-z0-9_.:-]{1,64}$",
                 "LAN_NET": r"^[0-9A-Fa-f:.\/]{3,64}$",

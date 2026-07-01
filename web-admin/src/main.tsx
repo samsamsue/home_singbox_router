@@ -33,6 +33,7 @@ type Status = {
 type Subscription = { id: string; name: string; url: string; enabled: boolean };
 type ActionResult = { ok: boolean; output?: string; error?: string; message?: string };
 type BasicSettings = Record<"LAN_IF" | "LAN_NET" | "LAN_IP" | "PROXY_PORT" | "PANEL_PORT" | "ADMIN_PORT" | "DNS1" | "DNS2" | "SUBSCRIBE_USER_AGENT" | "DOWNLOAD_PROXY", string>;
+type NetworkInterface = { name: string; address: string; cidr: string; network: string };
 type DialogState = {
   open: boolean;
   action: string;
@@ -116,6 +117,10 @@ function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 
 function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" {...props} />;
+}
+
+function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" {...props} />;
 }
 
 function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
@@ -564,14 +569,18 @@ function BasicSettingsDialog({ onClose, setResult }: { onClose: () => void; setR
     DOWNLOAD_PROXY: "",
   };
   const [settings, setSettings] = useState<BasicSettings>(empty);
+  const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState("");
+  const selectedInterface = interfaces.find((item) => item.name === settings.LAN_IF);
 
   useEffect(() => {
     let alive = true;
-    api<{ settings: BasicSettings }>("/api/settings/basic")
+    api<{ settings: BasicSettings; interfaces: NetworkInterface[] }>("/api/settings/basic")
       .then((data) => {
-        if (alive) setSettings({ ...empty, ...data.settings });
+        if (!alive) return;
+        setInterfaces(data.interfaces || []);
+        setSettings({ ...empty, ...data.settings });
       })
       .catch((err) => {
         if (alive) setMessage(err instanceof Error ? err.message : "读取失败");
@@ -586,6 +595,16 @@ function BasicSettingsDialog({ onClose, setResult }: { onClose: () => void; setR
 
   function update(key: keyof BasicSettings, value: string) {
     setSettings((current) => ({ ...current, [key]: value }));
+  }
+
+  function chooseInterface(name: string) {
+    const match = interfaces.find((item) => item.name === name);
+    setSettings((current) => ({
+      ...current,
+      LAN_IF: name,
+      LAN_IP: match?.address || current.LAN_IP,
+      LAN_NET: match?.network || current.LAN_NET,
+    }));
   }
 
   async function save() {
@@ -603,23 +622,10 @@ function BasicSettingsDialog({ onClose, setResult }: { onClose: () => void; setR
     }
   }
 
-  const fields: { key: keyof BasicSettings; label: string; placeholder?: string }[] = [
-    { key: "LAN_IF", label: "LAN 网卡" },
-    { key: "LAN_NET", label: "LAN 网段" },
-    { key: "LAN_IP", label: "旁路由 LAN IP" },
-    { key: "PROXY_PORT", label: "代理端口" },
-    { key: "PANEL_PORT", label: "节点面板端口" },
-    { key: "ADMIN_PORT", label: "管理后台端口" },
-    { key: "DNS1", label: "DNS 1" },
-    { key: "DNS2", label: "DNS 2" },
-    { key: "SUBSCRIBE_USER_AGENT", label: "订阅 User-Agent" },
-    { key: "DOWNLOAD_PROXY", label: "下载代理", placeholder: "例如 http://127.0.0.1:7890，可留空" },
-  ];
-
   return (
     <DialogShell
       title="基础设置"
-      description="保存后可执行“一键修复”或“更新订阅并应用”让相关配置生效。"
+      description="一般只需要选 LAN 网卡。旁路由 IP 和 LAN 网段会根据网卡自动识别。"
       onClose={onClose}
       wide
       footer={
@@ -629,14 +635,81 @@ function BasicSettingsDialog({ onClose, setResult }: { onClose: () => void; setR
         </>
       }
     >
-      <div className="grid gap-4 sm:grid-cols-2">
-        {fields.map((field) => (
-          <Label key={field.key}>
-            {field.label}
-            <Input value={settings[field.key]} placeholder={field.placeholder} onChange={(event) => update(field.key, event.target.value)} disabled={busy} />
+      <div className="grid gap-5">
+        <div className="rounded-lg border bg-muted/20 p-4">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold">网络识别</h3>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">选择家里设备能访问到的那张网卡。手机设置网关时使用下面识别出的旁路由 IP。</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Label className="sm:col-span-2">
+              LAN 网卡
+              <Select value={settings.LAN_IF} onChange={(event) => chooseInterface(event.target.value)} disabled={busy || interfaces.length === 0}>
+                {interfaces.length === 0 ? <option value="">未识别到可用网卡</option> : null}
+                {interfaces.map((item) => (
+                  <option key={`${item.name}-${item.cidr}`} value={item.name}>
+                    {item.name} - {item.address}
+                  </option>
+                ))}
+              </Select>
+            </Label>
+            <div className="rounded-md border bg-background px-3 py-2">
+              <div className="text-xs text-muted-foreground">旁路由 IP</div>
+              <div className="mt-1 truncate text-sm font-medium">{selectedInterface?.address || settings.LAN_IP || "未识别"}</div>
+            </div>
+            <div className="rounded-md border bg-background px-3 py-2">
+              <div className="text-xs text-muted-foreground">LAN 网段</div>
+              <div className="mt-1 truncate text-sm font-medium">{selectedInterface?.network || settings.LAN_NET || "未识别"}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Label>
+            代理端口
+            <Input value={settings.PROXY_PORT} onChange={(event) => update("PROXY_PORT", event.target.value)} disabled={busy} />
           </Label>
-        ))}
-        {message ? <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground sm:col-span-2">{message}</div> : null}
+          <Label>
+            节点面板端口
+            <Input value={settings.PANEL_PORT} onChange={(event) => update("PANEL_PORT", event.target.value)} disabled={busy} />
+          </Label>
+          <Label>
+            管理后台端口
+            <Input value={settings.ADMIN_PORT} onChange={(event) => update("ADMIN_PORT", event.target.value)} disabled={busy} />
+          </Label>
+        </div>
+
+        <details className="rounded-lg border bg-background">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">高级设置</summary>
+          <div className="grid gap-4 border-t p-4 sm:grid-cols-2">
+            <Label>
+              旁路由 IP
+              <Input value={settings.LAN_IP} onChange={(event) => update("LAN_IP", event.target.value)} disabled={busy} />
+            </Label>
+            <Label>
+              LAN 网段
+              <Input value={settings.LAN_NET} onChange={(event) => update("LAN_NET", event.target.value)} disabled={busy} />
+            </Label>
+            <Label>
+              DNS 1
+              <Input value={settings.DNS1} onChange={(event) => update("DNS1", event.target.value)} disabled={busy} />
+            </Label>
+            <Label>
+              DNS 2
+              <Input value={settings.DNS2} onChange={(event) => update("DNS2", event.target.value)} disabled={busy} />
+            </Label>
+            <Label>
+              订阅 User-Agent
+              <Input value={settings.SUBSCRIBE_USER_AGENT} onChange={(event) => update("SUBSCRIBE_USER_AGENT", event.target.value)} disabled={busy} />
+            </Label>
+            <Label>
+              下载代理
+              <Input value={settings.DOWNLOAD_PROXY} placeholder="例如 http://127.0.0.1:7890，可留空" onChange={(event) => update("DOWNLOAD_PROXY", event.target.value)} disabled={busy} />
+            </Label>
+          </div>
+        </details>
+
+        {message ? <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">{message}</div> : null}
       </div>
     </DialogShell>
   );
