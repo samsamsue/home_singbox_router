@@ -271,10 +271,37 @@ ensure_python_yaml() {
   apt-get install -y python3-yaml
 }
 
+cleanup_legacy_names() {
+  systemctl disable --now home-lan-bypass-forward.timer 2>/dev/null || true
+  systemctl disable --now home-lan-bypass-forward.service 2>/dev/null || true
+  rm -f \
+    /usr/local/bin/sb \
+    /usr/local/bin/sc \
+    /etc/systemd/system/home-lan-bypass-forward.service \
+    /etc/systemd/system/home-lan-bypass-forward.timer \
+    /etc/sysctl.d/99-home-lan-bypass-forward.conf \
+    /usr/local/sbin/home-lan-bypass-forward.sh \
+    /usr/local/sbin/home-router-update-subscription.sh \
+    /usr/local/sbin/home-router-update-webui.sh \
+    /usr/local/sbin/home-router-update-rulesets.sh \
+    /usr/local/sbin/home-router-update-core.sh \
+    /usr/local/sbin/home-router-diagnose-network.sh \
+    /usr/local/sbin/home-router-uninstall.sh
+  rm -rf \
+    /etc/home-router-singbox \
+    /opt/home-router-singbox \
+    /opt/home-router-singbox-installer
+}
+
 install_singbox
+cleanup_legacy_names
 mkdir -p "$BUILD" /etc/bypassproxy /etc/bypassproxy/rules /etc/sing-box /usr/local/sbin /usr/local/bin /usr/local/share/metacubexd /opt/bypassproxy
 
-cp "$CONF" /etc/bypassproxy/router.conf
+src_conf="$(readlink -f "$CONF" 2>/dev/null || printf "%s" "$CONF")"
+dst_conf="$(readlink -f /etc/bypassproxy/router.conf 2>/dev/null || printf "%s" /etc/bypassproxy/router.conf)"
+if [ "$src_conf" != "$dst_conf" ]; then
+  cp "$CONF" /etc/bypassproxy/router.conf
+fi
 cp -a "$ROOT/scripts" "$ROOT/templates" /opt/bypassproxy/
 chmod 0755 /opt/bypassproxy/scripts/*.sh /opt/bypassproxy/scripts/*.py
 if [ -f "$ROOT/.bypassproxy-version" ]; then
